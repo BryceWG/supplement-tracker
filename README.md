@@ -18,7 +18,7 @@
 补剂管家是一款基于 Flutter 开发的跨平台应用，帮助用户高效管理营养补剂的库存、追踪每日花费，并通过数据可视化分析消费习惯。支持多用户档案，适合家庭或团队共同使用。
 
 <div align="center">
-<img src="screenshots/app-preview.png" alt="应用预览" width="800">
+<img src="screenshots/app-preview.jpg" alt="应用预览" width="800">
 </div>
 
 ## 功能特性
