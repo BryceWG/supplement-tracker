@@ -12,6 +12,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/reminder_list.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/supplement_card.dart';
+import 'supplement_list_export_screen.dart';
 import '../profile/profile_manager_dialog.dart';
 import '../settings/settings_screen.dart';
 import '../supplement_editor/supplement_editor_dialog.dart';
@@ -278,6 +279,18 @@ class _TopNavBar extends StatelessWidget implements PreferredSizeWidget {
               ),
               const Spacer(),
               _ProfileMenu(controller: controller),
+              const SizedBox(width: 6),
+              IconButton(
+                tooltip: '导出补剂清单为图片',
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => SupplementListExportScreen(controller: controller),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.image_outlined),
+              ),
               const SizedBox(width: 6),
               IconButton(
                 tooltip: '设置',
