@@ -76,13 +76,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _postponeOneDay(Supplement supplement) async {
+    final beforeStart = supplement.startUseDate;
+    final beforeSkipped = supplement.skippedDates.length;
+
     final updated = await widget.controller.postponeStartUseOneDay(supplement.id);
     if (updated == null) return;
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('已将「${updated.name}」开始使用日期延期至 ${updated.effectiveStartUseDateYmd}')),
-    );
+    final startChanged = beforeStart != updated.startUseDate;
+    final skippedChanged = updated.skippedDates.length > beforeSkipped;
+
+    String message;
+    if (startChanged) {
+      message = '已将「${updated.name}」开始使用日期延期至 ${updated.effectiveStartUseDateYmd}';
+    } else if (skippedChanged) {
+      final today = Supplement.formatYmd(DateTime.now());
+      message = '已为「${updated.name}」跳过 $today（当天不吃）';
+    } else {
+      message = '已更新「${updated.name}」';
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _replenish(Supplement supplement) async {

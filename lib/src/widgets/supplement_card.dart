@@ -113,7 +113,7 @@ class SupplementCard extends StatelessWidget {
                       icon: const Icon(Icons.add_circle_outline),
                     ),
                     IconButton(
-                      tooltip: '延期一天',
+                      tooltip: '跳过今天',
                       onPressed: onPostponeOneDay,
                       icon: const Icon(Icons.snooze_outlined),
                     ),

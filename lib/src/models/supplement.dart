@@ -19,7 +19,8 @@ class Supplement {
     required this.remainingQuantity,
     required this.category,
     required this.colorHex,
-  });
+    List<String>? skippedDates,
+  }) : skippedDates = List.unmodifiable(skippedDates ?? const []);
 
   final String id;
   final String name;
@@ -34,6 +35,7 @@ class Supplement {
   final int remainingQuantity;
   final String category;
   final String colorHex;
+  final List<String> skippedDates;
 
   String get effectiveStartUseDateYmd => startUseDate ?? purchaseDate;
 
@@ -60,6 +62,7 @@ class Supplement {
     int? remainingQuantity,
     String? category,
     String? colorHex,
+    Object? skippedDates = _noChange,
   }) {
     return Supplement(
       id: id ?? this.id,
@@ -75,6 +78,7 @@ class Supplement {
       remainingQuantity: remainingQuantity ?? this.remainingQuantity,
       category: category ?? this.category,
       colorHex: colorHex ?? this.colorHex,
+      skippedDates: identical(skippedDates, _noChange) ? this.skippedDates : skippedDates as List<String>?,
     );
   }
 
@@ -93,9 +97,35 @@ class Supplement {
     return diff < 0 ? 0 : diff;
   }
 
+  int skippedDaysBefore(DateTime today) {
+    if (skippedDates.isEmpty) return 0;
+
+    final start = DateTime.tryParse(effectiveStartUseDateYmd);
+    if (start == null) return 0;
+    final startDay = startOfDay(start);
+    final todayDay = startOfDay(today);
+
+    var count = 0;
+    for (final ymd in skippedDates) {
+      final date = DateTime.tryParse(ymd);
+      if (date == null) continue;
+      final day = startOfDay(date);
+      if (day.isBefore(startDay)) continue;
+      if (day.isBefore(todayDay)) count++;
+    }
+    return count;
+  }
+
+  int consumedDaysAt(DateTime today) {
+    final used = usedDaysAt(today);
+    final skipped = skippedDaysBefore(today);
+    final consumed = used - skipped;
+    return consumed < 0 ? 0 : consumed;
+  }
+
   int estimatedRemainingQuantityAt(DateTime today) {
     if (dailyDosage <= 0) return remainingQuantity.clamp(0, totalQuantity);
-    final consumed = usedDaysAt(today) * dailyDosage;
+    final consumed = consumedDaysAt(today) * dailyDosage;
     final left = remainingQuantity - consumed;
     if (left <= 0) return 0;
     if (totalQuantity <= 0) return 0;
@@ -136,10 +166,12 @@ class Supplement {
         'remainingQuantity': remainingQuantity,
         'category': category,
         'color': colorHex,
+        if (skippedDates.isNotEmpty) 'skippedDates': skippedDates,
       };
 
   static Supplement fromJson(Map<String, Object?> json) {
     final category = json['category'] as String;
+    final skipped = (json['skippedDates'] as List?)?.cast<String>();
     return Supplement(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -154,6 +186,7 @@ class Supplement {
       remainingQuantity: (json['remainingQuantity'] as num).toInt(),
       category: category,
       colorHex: (json['color'] as String?) ?? CategoryColors.hexForCategory(category),
+      skippedDates: skipped,
     );
   }
 

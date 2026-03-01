@@ -28,6 +28,7 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
   String _dosageUnit = '粒';
   String _category = '维生素';
   late String _startUseDateYmd;
+  late List<String> _skippedDates;
 
   @override
   void initState() {
@@ -43,6 +44,7 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
     _dosageUnit = s?.dosageUnit ?? '粒';
     _category = s?.category ?? '维生素';
     _startUseDateYmd = s?.startUseDate ?? s?.purchaseDate ?? _todayYmd();
+    _skippedDates = [...(s?.skippedDates ?? const [])];
   }
 
   @override
@@ -78,9 +80,11 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
   }
 
   void _postponeOneDayLocal() {
-    final base = DateTime.tryParse(_startUseDateYmd) ?? DateTime.now();
-    final next = base.add(const Duration(days: 1));
-    setState(() => _startUseDateYmd = Supplement.formatYmd(next));
+    final today = Supplement.formatYmd(DateTime.now());
+    if (_skippedDates.contains(today)) return;
+    setState(() {
+      _skippedDates = [..._skippedDates, today]..sort();
+    });
   }
 
   void _save() {
@@ -110,6 +114,7 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
       remainingQuantity: existing == null ? totalQty : min(existing.remainingQuantity, totalQty),
       category: _category,
       colorHex: colorHex,
+      skippedDates: _skippedDates,
     );
 
     Navigator.of(context).pop(result);
@@ -248,11 +253,21 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                               OutlinedButton.icon(
                                 onPressed: _postponeOneDayLocal,
                                 icon: const Icon(Icons.snooze_outlined, size: 18),
-                                label: const Text('延期一天'),
+                                label: const Text('跳过今天'),
                               ),
                             ],
                           ],
                         ),
+                        if (isEditing && _skippedDates.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              '已跳过 ${_skippedDates.length} 天',
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
                           initialValue: _category,

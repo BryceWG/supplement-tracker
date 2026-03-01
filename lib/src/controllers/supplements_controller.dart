@@ -137,14 +137,29 @@ class SupplementsController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Supplement?> postponeStartUseOneDay(String supplementId) async {
+  Future<Supplement?> postponeStartUseOneDay(String supplementId, {DateTime? today}) async {
     final index = _supplements.indexWhere((s) => s.id == supplementId);
     if (index < 0) return null;
 
     final s = _supplements[index];
-    final base = Supplement.parseYmd(s.effectiveStartUseDateYmd);
-    final next = base.add(const Duration(days: 1));
-    final updated = s.copyWith(startUseDate: Supplement.formatYmd(next));
+    final now = today ?? DateTime.now();
+    final todayDay = Supplement.startOfDay(now);
+
+    final start = DateTime.tryParse(s.effectiveStartUseDateYmd) ?? now;
+    final startDay = Supplement.startOfDay(start);
+
+    // If the supplement hasn't started yet, postponing means moving the start day later.
+    // If it has started, postponing means "skip today" (do not consume today).
+    final Supplement updated;
+    if (todayDay.isBefore(startDay)) {
+      final next = startDay.add(const Duration(days: 1));
+      updated = s.copyWith(startUseDate: Supplement.formatYmd(next));
+    } else {
+      final ymd = Supplement.formatYmd(todayDay);
+      final set = {...s.skippedDates, ymd};
+      final list = set.toList()..sort();
+      updated = s.copyWith(skippedDates: list);
+    }
 
     _supplements = [
       for (final item in _supplements) if (item.id == supplementId) updated else item,

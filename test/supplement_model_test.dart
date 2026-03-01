@@ -21,12 +21,14 @@ void main() {
       remainingQuantity: 10,
       category: '其他',
       colorHex: '#000000',
+      skippedDates: const ['2026-03-03'],
     );
 
     final encoded = Supplement.encodeList([s]);
     final decoded = Supplement.decodeList(encoded).single;
     expect(decoded.startUseDate, '2026-03-02');
     expect(decoded.purchaseUrl, 'https://example.com/item');
+    expect(decoded.skippedDates, ['2026-03-03']);
   });
 
   test('Remaining days follows start date', () {
@@ -50,7 +52,29 @@ void main() {
     expect(s.estimatedRemainingQuantityAt(DateTime(2026, 3, 3)), 6);
   });
 
-  test('Controller postponeStartUseOneDay shifts date', () async {
+  test('Skipping a day delays consumption', () {
+    final s = Supplement(
+      id: 'x',
+      name: 'Test',
+      specification: 'Spec',
+      dailyDosage: 2,
+      dosageUnit: '粒',
+      price: 10,
+      purchaseDate: '2026-03-01',
+      startUseDate: '2026-03-01',
+      totalQuantity: 10,
+      remainingQuantity: 10,
+      category: '其他',
+      colorHex: '#000000',
+      skippedDates: const ['2026-03-02'],
+    );
+
+    // On 3/3, two days have passed since 3/1, but 3/2 was skipped, so only 1 day is consumed.
+    expect(s.estimatedRemainingQuantityAt(DateTime(2026, 3, 3)), 8);
+    expect(s.remainingDaysAt(DateTime(2026, 3, 3)), 4);
+  });
+
+  test('Controller postponeStartUseOneDay skips today', () async {
     SharedPreferences.setMockInitialValues({});
 
     final controller = SupplementsController(store: SupplementsStore());
@@ -73,9 +97,12 @@ void main() {
       ),
     );
 
-    final updated = await controller.postponeStartUseOneDay(id);
-    expect(updated, isNotNull);
-    expect(updated!.startUseDate, '2026-03-02');
+    final skipped = await controller.postponeStartUseOneDay(
+      id,
+      today: DateTime(2026, 3, 1),
+    );
+    expect(skipped, isNotNull);
+    expect(skipped!.skippedDates, contains('2026-03-01'));
   });
 
   test('Controller replenishQuantity increases totals', () async {
