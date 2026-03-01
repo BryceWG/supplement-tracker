@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "supplement_tracker" "\0"
+            VALUE "CompanyName", "Supplement Tracker" "\0"
+            VALUE "FileDescription", "补剂管家" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "supplement_tracker" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Supplement Tracker. All rights reserved." "\0"
             VALUE "OriginalFilename", "supplement_tracker.exe" "\0"
-            VALUE "ProductName", "supplement_tracker" "\0"
+            VALUE "ProductName", "补剂管家" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
