@@ -7,7 +7,7 @@ import 'package:supplement_tracker/src/services/supplements_store.dart';
 import 'package:supplement_tracker/src/ui/home/home_screen.dart';
 
 void main() {
-  testWidgets('Home renders header', (WidgetTester tester) async {
+  testWidgets('Home renders stats', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
 
     final controller = SupplementsController(store: SupplementsStore());
@@ -17,6 +17,6 @@ void main() {
       MaterialApp(home: HomeScreen(controller: controller)),
     );
 
-    expect(find.text('营养补剂跟踪器'), findsOneWidget);
+    expect(find.text('补剂总数'), findsOneWidget);
   });
 }

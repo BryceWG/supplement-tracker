@@ -114,8 +114,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 8),
-                        const _PageHeader(),
-                        const SizedBox(height: 16),
                         _StatsGrid(
                           total: supplements.length,
                           dailyCost: controller.dailyCostTotal,
@@ -289,28 +287,6 @@ class _ProfileMenu extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _PageHeader extends StatelessWidget {
-  const _PageHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '营养补剂跟踪器',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Color(0xFF1D1D1D)),
-        ),
-        SizedBox(height: 6),
-        Text(
-          '追踪补剂库存与花费，让健康投资更清晰',
-          style: TextStyle(fontSize: 15, color: Color(0xFF8A8A8A)),
-        ),
-      ],
     );
   }
 }
