@@ -10,6 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
   file_picker: ^10.3.10
+  path_provider: ^2.1.5
+  share_plus: ^11.1.0
   shared_preferences: ^2.2.2
 
 dev_dependencies:
@@ -31,3 +33,5 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icons/app_icon.png

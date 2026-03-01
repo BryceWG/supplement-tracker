@@ -1,11 +1,11 @@
 {
-    "name": "supplement_tracker",
-    "short_name": "supplement_tracker",
+    "name": "补剂管家",
+    "short_name": "补剂管家",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "补剂管家：营养补剂库存与花费管理工具。",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

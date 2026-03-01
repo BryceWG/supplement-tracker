@@ -263,14 +263,19 @@ class _TopNavBar extends StatelessWidget implements PreferredSizeWidget {
           titleSpacing: 16,
           title: Row(
             children: [
-              Container(
+              SizedBox(
                 width: 36,
                 height: 36,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark]),
+                child: ClipRRect(
                   borderRadius: BorderRadius.circular(10),
+                  child: ColoredBox(
+                    color: Colors.white,
+                    child: Image.asset(
+                      'assets/icons/app_icon.png',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
                 ),
-                child: const Icon(Icons.medication_outlined, color: Colors.white, size: 20),
               ),
               const SizedBox(width: 12),
               const Text(

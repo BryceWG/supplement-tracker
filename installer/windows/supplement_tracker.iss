@@ -1,4 +1,4 @@
-#define MyAppName "补剂管家"
+﻿#define MyAppName "补剂管家"
 #ifndef MyAppVersion
   #define MyAppVersion "0.0.0"
 #endif

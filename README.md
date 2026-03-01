@@ -1,6 +1,6 @@
 <div align="center">
 
-# 补剂管家 (Supplement Tracker)
+# 补剂管家
 
 [![Flutter Version](https://img.shields.io/badge/Flutter-3.41.2-blue.svg)](https://flutter.dev)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
