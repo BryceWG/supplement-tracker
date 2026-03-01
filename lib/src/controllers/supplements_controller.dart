@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../models/profile.dart';
 import '../models/supplement.dart';
 import '../services/supplements_store.dart';
 
@@ -10,13 +11,100 @@ class SupplementsController extends ChangeNotifier {
 
   bool _initialized = false;
   List<Supplement> _supplements = const [];
+  List<Profile> _profiles = const [];
+  String? _activeProfileId;
 
   bool get initialized => _initialized;
   List<Supplement> get supplements => List.unmodifiable(_supplements);
+  List<Profile> get profiles => List.unmodifiable(_profiles);
+
+  Profile get activeProfile {
+    final id = _activeProfileId;
+    if (id == null) return _profiles.first;
+    return _profiles.firstWhere((p) => p.id == id, orElse: () => _profiles.first);
+  }
 
   Future<void> init() async {
-    _supplements = await _store.loadSupplements();
+    _profiles = await _store.loadProfiles();
+    _activeProfileId = await _store.loadActiveProfileId();
+
+    if (_profiles.isEmpty) {
+      final me = Profile(id: 'me', name: '我');
+      _profiles = [me];
+      _activeProfileId = me.id;
+      await _store.saveProfiles(_profiles);
+      await _store.saveActiveProfileId(me.id);
+    }
+
+    if (_activeProfileId == null || !_profiles.any((p) => p.id == _activeProfileId)) {
+      _activeProfileId = _profiles.first.id;
+      await _store.saveActiveProfileId(_activeProfileId!);
+    }
+
+    // Migrate older single-user data into the active profile if needed.
+    await _store.migrateLegacySupplementsIfNeeded(_activeProfileId!);
+
+    _supplements = await _store.loadSupplements(
+      profileId: _activeProfileId!,
+      seedSampleIfEmpty: true,
+    );
     _initialized = true;
+    notifyListeners();
+  }
+
+  Future<void> switchProfile(String profileId) async {
+    if (_activeProfileId == profileId) return;
+    if (!_profiles.any((p) => p.id == profileId)) return;
+
+    _activeProfileId = profileId;
+    await _store.saveActiveProfileId(profileId);
+    _supplements = await _store.loadSupplements(profileId: profileId);
+    notifyListeners();
+  }
+
+  Future<void> addProfile(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+
+    final id = DateTime.now().microsecondsSinceEpoch.toString();
+    _profiles = [..._profiles, Profile(id: id, name: trimmed)];
+    await _store.saveProfiles(_profiles);
+
+    // Switch to the new profile for convenience.
+    await switchProfile(id);
+  }
+
+  Future<void> renameProfile(String profileId, String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+
+    final index = _profiles.indexWhere((p) => p.id == profileId);
+    if (index < 0) return;
+
+    _profiles = [
+      for (final p in _profiles)
+        if (p.id == profileId) Profile(id: p.id, name: trimmed) else p,
+    ];
+    await _store.saveProfiles(_profiles);
+    notifyListeners();
+  }
+
+  Future<void> deleteProfile(String profileId) async {
+    if (_profiles.length <= 1) return;
+    if (!_profiles.any((p) => p.id == profileId)) return;
+
+    final wasActive = _activeProfileId == profileId;
+    _profiles = _profiles.where((p) => p.id != profileId).toList();
+    await _store.saveProfiles(_profiles);
+    await _store.deleteProfileData(profileId);
+
+    if (wasActive) {
+      final next = _profiles.first.id;
+      _activeProfileId = next;
+      await _store.saveActiveProfileId(next);
+      _supplements = await _store.loadSupplements(profileId: next);
+    }
+
     notifyListeners();
   }
 
@@ -29,13 +117,13 @@ class SupplementsController extends ChangeNotifier {
     } else {
       _supplements = [..._supplements, supplement];
     }
-    await _store.saveSupplements(_supplements);
+    await _store.saveSupplements(profileId: activeProfile.id, supplements: _supplements);
     notifyListeners();
   }
 
   Future<void> removeById(String id) async {
     _supplements = _supplements.where((s) => s.id != id).toList();
-    await _store.saveSupplements(_supplements);
+    await _store.saveSupplements(profileId: activeProfile.id, supplements: _supplements);
     notifyListeners();
   }
 
@@ -47,4 +135,3 @@ class SupplementsController extends ChangeNotifier {
     return _supplements.map((s) => s.remainingDays).reduce((a, b) => a < b ? a : b);
   }
 }
-

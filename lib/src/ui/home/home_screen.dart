@@ -12,6 +12,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/reminder_list.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/supplement_card.dart';
+import '../profile/profile_manager_dialog.dart';
 import '../supplement_editor/supplement_editor_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -87,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
         final supplements = controller.supplements;
 
         return Scaffold(
-          appBar: _TopNavBar(onAdd: () => _openEditor()),
+          appBar: _TopNavBar(controller: controller),
           floatingActionButton: FloatingActionButton(
             onPressed: () => _openEditor(),
             backgroundColor: AppTheme.primary,
@@ -162,9 +163,9 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _TopNavBar extends StatelessWidget implements PreferredSizeWidget {
-  const _TopNavBar({required this.onAdd});
+  const _TopNavBar({required this.controller});
 
-  final VoidCallback onAdd;
+  final SupplementsController controller;
 
   @override
   Size get preferredSize => const Size.fromHeight(64);
@@ -194,26 +195,98 @@ class _TopNavBar extends StatelessWidget implements PreferredSizeWidget {
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
               const Spacer(),
-              if (MediaQuery.sizeOf(context).width >= 720) ...[
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: onAdd,
-                  icon: const Icon(Icons.add),
-                  label: const Text('添加补剂'),
-                ),
-              ] else
-                IconButton(
-                  tooltip: '添加补剂',
-                  onPressed: onAdd,
-                  icon: const Icon(Icons.add),
-                ),
+              _ProfileMenu(controller: controller),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileMenu extends StatelessWidget {
+  const _ProfileMenu({required this.controller});
+
+  final SupplementsController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = controller.activeProfile;
+
+    return PopupMenuButton<String>(
+      tooltip: '切换成员',
+      position: PopupMenuPosition.under,
+      onSelected: (value) async {
+        if (value == '_manage') {
+          await showDialog<void>(
+            context: context,
+            builder: (context) => ProfileManagerDialog(controller: controller),
+          );
+          return;
+        }
+        await controller.switchProfile(value);
+      },
+      itemBuilder: (context) {
+        final items = <PopupMenuEntry<String>>[];
+
+        for (final p in controller.profiles) {
+          final isActive = p.id == active.id;
+          items.add(
+            PopupMenuItem<String>(
+              value: p.id,
+              child: Row(
+                children: [
+                  if (isActive) ...[
+                    const Icon(Icons.check, size: 18),
+                    const SizedBox(width: 8),
+                  ] else
+                    const SizedBox(width: 26),
+                  Expanded(child: Text(p.name)),
+                ],
+              ),
+            ),
+          );
+        }
+
+        items.add(const PopupMenuDivider());
+        items.add(
+          const PopupMenuItem<String>(
+            value: '_manage',
+            child: Row(
+              children: [
+                Icon(Icons.group_outlined, size: 18),
+                SizedBox(width: 8),
+                Text('管理成员…'),
+              ],
+            ),
+          ),
+        );
+
+        return items;
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppTheme.primary.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: AppTheme.primary.withValues(alpha: 0.18)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.person_outline, size: 18, color: AppTheme.primary),
+            const SizedBox(width: 6),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 140),
+              child: Text(
+                active.name,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w700, fontSize: 13),
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.expand_more, size: 18, color: AppTheme.primary),
+          ],
         ),
       ),
     );
