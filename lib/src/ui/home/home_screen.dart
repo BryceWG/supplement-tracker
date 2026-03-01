@@ -13,6 +13,7 @@ import '../../widgets/reminder_list.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/supplement_card.dart';
 import '../profile/profile_manager_dialog.dart';
+import '../settings/settings_screen.dart';
 import '../supplement_editor/supplement_editor_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -205,6 +206,18 @@ class _TopNavBar extends StatelessWidget implements PreferredSizeWidget {
               ),
               const Spacer(),
               _ProfileMenu(controller: controller),
+              const SizedBox(width: 6),
+              IconButton(
+                tooltip: '设置',
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => SettingsScreen(controller: controller),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.settings_outlined),
+              ),
             ],
           ),
         ),

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 
 import '../models/profile.dart';
@@ -24,7 +26,7 @@ class SupplementsController extends ChangeNotifier {
     return _profiles.firstWhere((p) => p.id == id, orElse: () => _profiles.first);
   }
 
-  Future<void> init() async {
+  Future<void> _loadFromStore({required bool seedSampleIfEmpty}) async {
     _profiles = await _store.loadProfiles();
     _activeProfileId = await _store.loadActiveProfileId();
 
@@ -46,10 +48,18 @@ class SupplementsController extends ChangeNotifier {
 
     _supplements = await _store.loadSupplements(
       profileId: _activeProfileId!,
-      seedSampleIfEmpty: true,
+      seedSampleIfEmpty: seedSampleIfEmpty,
     );
     _initialized = true;
     notifyListeners();
+  }
+
+  Future<void> init() async {
+    await _loadFromStore(seedSampleIfEmpty: true);
+  }
+
+  Future<void> reload({bool seedSampleIfEmpty = false}) async {
+    await _loadFromStore(seedSampleIfEmpty: seedSampleIfEmpty);
   }
 
   Future<void> switchProfile(String profileId) async {
@@ -150,5 +160,28 @@ class SupplementsController extends ChangeNotifier {
   int get shortestRemainingDays {
     if (_supplements.isEmpty) return 0;
     return _supplements.map((s) => s.remainingDays).reduce((a, b) => a < b ? a : b);
+  }
+
+  Future<String> exportBackupJson() async {
+    final data = await _store.exportBackup();
+
+    // Ensure the export reflects what the user is currently seeing.
+    final active = _activeProfileId;
+    final supplementsByProfile = data['supplementsByProfile'];
+    if (active != null && supplementsByProfile is Map) {
+      supplementsByProfile[active] = _supplements.map((s) => s.toJson()).toList();
+    }
+
+    return jsonEncode(data);
+  }
+
+  Future<void> importBackupJson(String json) async {
+    final decoded = jsonDecode(json);
+    if (decoded is! Map) {
+      throw const FormatException('备份文件格式错误');
+    }
+
+    await _store.importBackup(decoded.cast<String, Object?>());
+    await reload(seedSampleIfEmpty: false);
   }
 }
