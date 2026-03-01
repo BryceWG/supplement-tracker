@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../../models/supplement.dart';
@@ -21,9 +23,11 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
   late final TextEditingController _dailyDosage;
   late final TextEditingController _price;
   late final TextEditingController _totalQty;
+  late final TextEditingController _purchaseUrl;
 
   String _dosageUnit = '粒';
   String _category = '维生素';
+  late String _startUseDateYmd;
 
   @override
   void initState() {
@@ -34,9 +38,11 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
     _dailyDosage = TextEditingController(text: (s?.dailyDosage ?? 1).toString());
     _price = TextEditingController(text: (s?.price ?? '').toString());
     _totalQty = TextEditingController(text: (s?.totalQuantity ?? '').toString());
+    _purchaseUrl = TextEditingController(text: s?.purchaseUrl ?? '');
 
     _dosageUnit = s?.dosageUnit ?? '粒';
     _category = s?.category ?? '维生素';
+    _startUseDateYmd = s?.startUseDate ?? s?.purchaseDate ?? _todayYmd();
   }
 
   @override
@@ -46,6 +52,7 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
     _dailyDosage.dispose();
     _price.dispose();
     _totalQty.dispose();
+    _purchaseUrl.dispose();
     super.dispose();
   }
 
@@ -55,6 +62,25 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
     final m = now.month.toString().padLeft(2, '0');
     final d = now.day.toString().padLeft(2, '0');
     return '$y-$m-$d';
+  }
+
+  Future<void> _pickStartUseDate() async {
+    final initial = DateTime.tryParse(_startUseDateYmd) ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(DateTime.now().year + 10),
+      helpText: '选择开始使用日期',
+    );
+    if (picked == null) return;
+    setState(() => _startUseDateYmd = Supplement.formatYmd(picked));
+  }
+
+  void _postponeOneDayLocal() {
+    final base = DateTime.tryParse(_startUseDateYmd) ?? DateTime.now();
+    final next = base.add(const Duration(days: 1));
+    setState(() => _startUseDateYmd = Supplement.formatYmd(next));
   }
 
   void _save() {
@@ -67,7 +93,9 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
 
     final colorHex = existing?.colorHex ?? CategoryColors.hexForCategory(_category);
     final id = existing?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
+    final purchaseUrl = _purchaseUrl.text.trim();
 
+    final purchaseDate = existing?.purchaseDate ?? _todayYmd();
     final result = Supplement(
       id: id,
       name: _name.text.trim(),
@@ -75,9 +103,11 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
       dailyDosage: dailyDosage,
       dosageUnit: _dosageUnit,
       price: price,
-      purchaseDate: _todayYmd(),
+      purchaseDate: purchaseDate,
+      startUseDate: _startUseDateYmd,
+      purchaseUrl: purchaseUrl.isEmpty ? null : purchaseUrl,
       totalQuantity: totalQty,
-      remainingQuantity: totalQty,
+      remainingQuantity: existing == null ? totalQty : min(existing.remainingQuantity, totalQty),
       category: _category,
       colorHex: colorHex,
     );
@@ -198,6 +228,32 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                           ],
                         ),
                         const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onTap: _pickStartUseDate,
+                                child: InputDecorator(
+                                  decoration: const InputDecoration(
+                                    labelText: '开始使用日期',
+                                    suffixIcon: Icon(Icons.calendar_today_outlined),
+                                  ),
+                                  child: Text(_startUseDateYmd),
+                                ),
+                              ),
+                            ),
+                            if (isEditing) ...[
+                              const SizedBox(width: 12),
+                              OutlinedButton.icon(
+                                onPressed: _postponeOneDayLocal,
+                                icon: const Icon(Icons.snooze_outlined, size: 18),
+                                label: const Text('延期一天'),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
                           initialValue: _category,
                           decoration: const InputDecoration(labelText: '分类'),
@@ -209,6 +265,19 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                             DropdownMenuItem(value: '其他', child: Text('其他')),
                           ],
                           onChanged: (v) => setState(() => _category = v ?? '维生素'),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _purchaseUrl,
+                          decoration: const InputDecoration(labelText: '购买链接（可选）', hintText: 'https://...'),
+                          keyboardType: TextInputType.url,
+                          validator: (v) {
+                            final raw = (v ?? '').trim();
+                            if (raw.isEmpty) return null;
+                            final uri = Uri.tryParse(raw);
+                            if (uri == null || !(uri.hasScheme && uri.hasAuthority)) return '请输入有效的链接（包含 http/https）';
+                            return null;
+                          },
                         ),
                       ],
                     ),

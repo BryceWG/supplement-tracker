@@ -127,6 +127,23 @@ class SupplementsController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<Supplement?> postponeStartUseOneDay(String supplementId) async {
+    final index = _supplements.indexWhere((s) => s.id == supplementId);
+    if (index < 0) return null;
+
+    final s = _supplements[index];
+    final base = Supplement.parseYmd(s.effectiveStartUseDateYmd);
+    final next = base.add(const Duration(days: 1));
+    final updated = s.copyWith(startUseDate: Supplement.formatYmd(next));
+
+    _supplements = [
+      for (final item in _supplements) if (item.id == supplementId) updated else item,
+    ];
+    await _store.saveSupplements(profileId: activeProfile.id, supplements: _supplements);
+    notifyListeners();
+    return updated;
+  }
+
   double get dailyCostTotal => _supplements.fold(0, (sum, s) => sum + s.dailyCost);
   double get monthlyCostTotal => dailyCostTotal * 30;
 

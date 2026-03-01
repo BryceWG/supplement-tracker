@@ -74,6 +74,16 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _postponeOneDay(Supplement supplement) async {
+    final updated = await widget.controller.postponeStartUseOneDay(supplement.id);
+    if (updated == null) return;
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已将「${updated.name}」开始使用日期延期至 ${updated.effectiveStartUseDateYmd}')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = widget.controller;
@@ -132,6 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   SupplementCard(
                                     supplement: s,
                                     onEdit: () => _openEditor(supplement: s),
+                                    onPostponeOneDay: () => _postponeOneDay(s),
                                     onDelete: () => _confirmDelete(s),
                                   ),
                                   const SizedBox(height: 12),

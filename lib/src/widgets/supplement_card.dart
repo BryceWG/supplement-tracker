@@ -9,11 +9,13 @@ class SupplementCard extends StatelessWidget {
     super.key,
     required this.supplement,
     required this.onEdit,
+    required this.onPostponeOneDay,
     required this.onDelete,
   });
 
   final Supplement supplement;
   final VoidCallback onEdit;
+  final VoidCallback onPostponeOneDay;
   final VoidCallback onDelete;
 
   Color _progressColor(int remainingDays) {
@@ -53,7 +55,8 @@ class SupplementCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${supplement.specification} · 每日${supplement.dailyDosage}${supplement.dosageUnit}',
+                    '${supplement.specification} · 每日${supplement.dailyDosage}${supplement.dosageUnit}'
+                    ' · 开始：${supplement.effectiveStartUseDateYmd}',
                     style: const TextStyle(color: Color(0xFF8A8A8A), fontSize: 12),
                   ),
                   const SizedBox(height: 10),
@@ -100,6 +103,11 @@ class SupplementCard extends StatelessWidget {
                       tooltip: '编辑',
                       onPressed: onEdit,
                       icon: const Icon(Icons.edit_outlined),
+                    ),
+                    IconButton(
+                      tooltip: '延期一天',
+                      onPressed: onPostponeOneDay,
+                      icon: const Icon(Icons.snooze_outlined),
                     ),
                     IconButton(
                       tooltip: '删除',

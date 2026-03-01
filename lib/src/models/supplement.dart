@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import '../util/colors.dart';
 
+const _noChange = Object();
+
 class Supplement {
   Supplement({
     required this.id,
@@ -11,6 +13,8 @@ class Supplement {
     required this.dosageUnit,
     required this.price,
     required this.purchaseDate,
+    this.startUseDate,
+    this.purchaseUrl,
     required this.totalQuantity,
     required this.remainingQuantity,
     required this.category,
@@ -24,10 +28,55 @@ class Supplement {
   final String dosageUnit;
   final double price;
   final String purchaseDate; // yyyy-MM-dd
+  final String? startUseDate; // yyyy-MM-dd
+  final String? purchaseUrl;
   final int totalQuantity;
   final int remainingQuantity;
   final String category;
   final String colorHex;
+
+  String get effectiveStartUseDateYmd => startUseDate ?? purchaseDate;
+
+  static DateTime parseYmd(String ymd) => DateTime.parse(ymd);
+
+  static String formatYmd(DateTime date) {
+    final y = date.year.toString().padLeft(4, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    final d = date.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
+  Supplement copyWith({
+    String? id,
+    String? name,
+    String? specification,
+    int? dailyDosage,
+    String? dosageUnit,
+    double? price,
+    String? purchaseDate,
+    Object? startUseDate = _noChange,
+    Object? purchaseUrl = _noChange,
+    int? totalQuantity,
+    int? remainingQuantity,
+    String? category,
+    String? colorHex,
+  }) {
+    return Supplement(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      specification: specification ?? this.specification,
+      dailyDosage: dailyDosage ?? this.dailyDosage,
+      dosageUnit: dosageUnit ?? this.dosageUnit,
+      price: price ?? this.price,
+      purchaseDate: purchaseDate ?? this.purchaseDate,
+      startUseDate: identical(startUseDate, _noChange) ? this.startUseDate : startUseDate as String?,
+      purchaseUrl: identical(purchaseUrl, _noChange) ? this.purchaseUrl : purchaseUrl as String?,
+      totalQuantity: totalQuantity ?? this.totalQuantity,
+      remainingQuantity: remainingQuantity ?? this.remainingQuantity,
+      category: category ?? this.category,
+      colorHex: colorHex ?? this.colorHex,
+    );
+  }
 
   double get dailyCost {
     final daysSupply = totalQuantity / dailyDosage;
@@ -53,6 +102,8 @@ class Supplement {
         'dosageUnit': dosageUnit,
         'price': price,
         'purchaseDate': purchaseDate,
+        if (startUseDate != null) 'startUseDate': startUseDate,
+        if (purchaseUrl != null) 'purchaseUrl': purchaseUrl,
         'totalQuantity': totalQuantity,
         'remainingQuantity': remainingQuantity,
         'category': category,
@@ -69,6 +120,8 @@ class Supplement {
       dosageUnit: json['dosageUnit'] as String,
       price: (json['price'] as num).toDouble(),
       purchaseDate: json['purchaseDate'] as String,
+      startUseDate: json['startUseDate'] as String?,
+      purchaseUrl: json['purchaseUrl'] as String?,
       totalQuantity: (json['totalQuantity'] as num).toInt(),
       remainingQuantity: (json['remainingQuantity'] as num).toInt(),
       category: category,
@@ -88,4 +141,3 @@ class Supplement {
         .toList();
   }
 }
-
