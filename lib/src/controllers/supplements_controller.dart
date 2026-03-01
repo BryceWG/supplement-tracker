@@ -55,7 +55,7 @@ class SupplementsController extends ChangeNotifier {
   }
 
   Future<void> init() async {
-    await _loadFromStore(seedSampleIfEmpty: true);
+    await _loadFromStore(seedSampleIfEmpty: false);
   }
 
   Future<void> reload({bool seedSampleIfEmpty = false}) async {
@@ -145,7 +145,7 @@ class SupplementsController extends ChangeNotifier {
     final now = today ?? DateTime.now();
     final todayDay = Supplement.startOfDay(now);
 
-    final start = DateTime.tryParse(s.effectiveStartUseDateYmd) ?? now;
+    final start = DateTime.tryParse(s.startUseDateYmdForCalc(now)) ?? now;
     final startDay = Supplement.startOfDay(start);
 
     // If the supplement hasn't started yet, postponing means moving the start day later.

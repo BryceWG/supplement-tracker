@@ -88,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     String message;
     if (startChanged) {
-      message = '已将「${updated.name}」开始使用日期延期至 ${updated.effectiveStartUseDateYmd}';
+      message = '已将「${updated.name}」开始使用日期延期至 ${updated.startUseDate ?? updated.effectiveStartUseDateYmd}';
     } else if (skippedChanged) {
       final today = Supplement.formatYmd(DateTime.now());
       message = '已为「${updated.name}」跳过 $today（当天不吃）';

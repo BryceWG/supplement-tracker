@@ -59,7 +59,7 @@ class SupplementCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     '${supplement.specification} · 每日${supplement.dailyDosage}${supplement.dosageUnit}'
-                    ' · 开始：${supplement.effectiveStartUseDateYmd}',
+                    ' · 开始：${supplement.startUseDate ?? '未设置'}',
                     style: const TextStyle(color: Color(0xFF8A8A8A), fontSize: 12),
                   ),
                   const SizedBox(height: 10),

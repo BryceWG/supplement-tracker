@@ -52,6 +52,26 @@ void main() {
     expect(s.estimatedRemainingQuantityAt(DateTime(2026, 3, 3)), 6);
   });
 
+  test('Remaining uses totalQuantity as baseline', () {
+    final s = Supplement(
+      id: 'x',
+      name: 'Fish Oil',
+      specification: '1000mg, 120粒',
+      dailyDosage: 2,
+      dosageUnit: '粒',
+      price: 168,
+      purchaseDate: '2024-02-01',
+      startUseDate: '2026-02-28',
+      totalQuantity: 120,
+      remainingQuantity: 45, // legacy/sample value; should not shrink the estimate
+      category: '脂肪酸',
+      colorHex: '#000000',
+    );
+
+    expect(s.remainingDaysAt(DateTime(2026, 3, 1)), 59);
+    expect(s.estimatedRemainingQuantityAt(DateTime(2026, 3, 1)), 118);
+  });
+
   test('Skipping a day delays consumption', () {
     final s = Supplement(
       id: 'x',

@@ -2,7 +2,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/profile.dart';
 import '../models/supplement.dart';
-import '../sample/sample_data.dart';
 
 class SupplementsStore {
   static const _legacySupplementsKey = 'supplements_v1';
@@ -69,13 +68,13 @@ class SupplementsStore {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_supplementsKeyForProfile(profileId));
     if (raw == null || raw.trim().isEmpty) {
-      return seedSampleIfEmpty ? SampleData.supplements() : const [];
+      return const [];
     }
 
     try {
       return Supplement.decodeList(raw);
     } catch (_) {
-      return seedSampleIfEmpty ? SampleData.supplements() : const [];
+      return const [];
     }
   }
 

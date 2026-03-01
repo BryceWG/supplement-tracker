@@ -39,6 +39,12 @@ class Supplement {
 
   String get effectiveStartUseDateYmd => startUseDate ?? purchaseDate;
 
+  String startUseDateYmdForCalc(DateTime today) {
+    // Legacy data might not have `startUseDate`. In that case, treat it as "not started yet",
+    // so remaining days won't suddenly drop just because `purchaseDate` is old.
+    return startUseDate ?? formatYmd(today);
+  }
+
   static DateTime parseYmd(String ymd) => DateTime.parse(ymd);
 
   static String formatYmd(DateTime date) {
@@ -91,7 +97,7 @@ class Supplement {
   static DateTime startOfDay(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 
   int usedDaysAt(DateTime today) {
-    final start = DateTime.tryParse(effectiveStartUseDateYmd);
+    final start = DateTime.tryParse(startUseDateYmdForCalc(today));
     if (start == null) return 0;
     final diff = startOfDay(today).difference(startOfDay(start)).inDays;
     return diff < 0 ? 0 : diff;
@@ -100,7 +106,7 @@ class Supplement {
   int skippedDaysBefore(DateTime today) {
     if (skippedDates.isEmpty) return 0;
 
-    final start = DateTime.tryParse(effectiveStartUseDateYmd);
+    final start = DateTime.tryParse(startUseDateYmdForCalc(today));
     if (start == null) return 0;
     final startDay = startOfDay(start);
     final todayDay = startOfDay(today);
@@ -124,11 +130,12 @@ class Supplement {
   }
 
   int estimatedRemainingQuantityAt(DateTime today) {
-    if (dailyDosage <= 0) return remainingQuantity.clamp(0, totalQuantity);
-    final consumed = consumedDaysAt(today) * dailyDosage;
-    final left = remainingQuantity - consumed;
-    if (left <= 0) return 0;
     if (totalQuantity <= 0) return 0;
+    if (dailyDosage <= 0) return totalQuantity;
+
+    final consumed = consumedDaysAt(today) * dailyDosage;
+    final left = totalQuantity - consumed;
+    if (left <= 0) return 0;
     return left > totalQuantity ? totalQuantity : left;
   }
 
