@@ -164,6 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         final supplements = controller.supplements;
+        final hasLowStockReminders = supplements.any((s) => s.remainingDays <= 14);
 
         return Scaffold(
           appBar: _TopNavBar(controller: controller),
@@ -192,6 +193,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 8),
+                        if (hasLowStockReminders) ...[
+                          ReminderList(supplements: supplements),
+                          const SizedBox(height: 18),
+                        ],
                         _StatsGrid(
                           total: supplements.length,
                           dailyCost: controller.dailyCostTotal,
@@ -225,7 +230,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: _ChartsGrid(supplements: supplements),
                           ),
                           const SizedBox(height: 18),
-                          ReminderList(supplements: supplements),
                         ],
                       ],
                     ),
