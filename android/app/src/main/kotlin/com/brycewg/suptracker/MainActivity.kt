@@ -1,4 +1,4 @@
-package com.example.supplement_tracker
+package com.brycewg.suptracker
 
 import io.flutter.embedding.android.FlutterActivity
 
