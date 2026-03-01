@@ -333,7 +333,9 @@ class _StatsGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final columns = width >= 1024 ? 4 : (width >= 640 ? 2 : 1);
+        // Mobile: show 2 cards per row (2 rows total) to save vertical space.
+        // Super narrow screens fall back to 1 column to avoid cramped layout.
+        final columns = width >= 1024 ? 4 : (width < 360 ? 1 : 2);
         final items = [
           StatCardData(
             icon: Icons.inventory_2_outlined,
