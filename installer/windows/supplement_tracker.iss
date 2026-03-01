@@ -26,8 +26,19 @@ SetupIconFile=..\..\windows\runner\resources\app_icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 SetupLogging=yes
 
+#define _PF86 GetEnv("ProgramFiles(x86)")
+#define _PF GetEnv("ProgramFiles")
+#define _InnoLangCN_1 AddBackslash(_PF86) + "Inno Setup 6\Languages\ChineseSimplified.isl"
+#define _InnoLangCN_2 AddBackslash(_PF) + "Inno Setup 6\Languages\ChineseSimplified.isl"
+
 [Languages]
+#if FileExists(_InnoLangCN_1) || FileExists(_InnoLangCN_2)
 Name: "chinesesimp"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
+#else
+; Some minimal Inno Setup installs (e.g. CI) may not include extra languages.
+; Fall back to the default language file so packaging never fails.
+Name: "english"; MessagesFile: "compiler:Default.isl"
+#endif
 
 [Tasks]
 Name: "desktopicon"; Description: "创建桌面图标"; GroupDescription: "附加任务"; Flags: unchecked
