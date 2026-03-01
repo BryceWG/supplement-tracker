@@ -185,8 +185,20 @@ class SupplementsController extends ChangeNotifier {
     return updated;
   }
 
-  double get dailyCostTotal => _supplements.fold(0, (sum, s) => sum + s.dailyCost);
-  double get monthlyCostTotal => dailyCostTotal * 30;
+  double dailyCostTotalAt(DateTime day) {
+    return _supplements.fold(0, (sum, s) => sum + s.dailyCostOn(day));
+  }
+
+  double monthlyCostTotalFrom(DateTime from, {int days = 30}) {
+    var total = 0.0;
+    for (final s in _supplements) {
+      total += s.costForNextDays(from: from, days: days);
+    }
+    return total;
+  }
+
+  double get dailyCostTotal => dailyCostTotalAt(DateTime.now());
+  double get monthlyCostTotal => monthlyCostTotalFrom(DateTime.now(), days: 30);
 
   int get shortestRemainingDays {
     if (_supplements.isEmpty) return 0;

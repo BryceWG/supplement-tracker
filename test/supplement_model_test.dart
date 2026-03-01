@@ -154,5 +154,96 @@ void main() {
     expect(updated!.totalQuantity, 15);
     expect(updated.remainingQuantity, 15);
   });
+
+  test('Daily cost on a date respects start/skip/stock', () {
+    final s = Supplement(
+      id: 'x',
+      name: 'Test',
+      specification: 'Spec',
+      dailyDosage: 1,
+      dosageUnit: '粒',
+      price: 10,
+      purchaseDate: '2026-03-01',
+      startUseDate: '2026-03-02',
+      totalQuantity: 2,
+      remainingQuantity: 2,
+      category: '其他',
+      colorHex: '#000000',
+      skippedDates: const ['2026-03-02'],
+    );
+
+    // Before start date: not consuming.
+    expect(s.dailyCostOn(DateTime(2026, 3, 1)), 0);
+    // Start day is skipped: still not consuming.
+    expect(s.dailyCostOn(DateTime(2026, 3, 2)), 0);
+    // Next day: consuming and has stock.
+    expect(s.dailyCostOn(DateTime(2026, 3, 3)), 5);
+    // Out of stock after consuming 2 days (3/3 and 3/4).
+    expect(s.dailyCostOn(DateTime(2026, 3, 5)), 0);
+  });
+
+  test('Controller daily/monthly totals follow per-day consumption', () async {
+    SharedPreferences.setMockInitialValues({});
+
+    final controller = SupplementsController(store: SupplementsStore());
+    await controller.init();
+
+    await controller.upsert(
+      Supplement(
+        id: 'a',
+        name: 'A',
+        specification: 'Spec',
+        dailyDosage: 1,
+        dosageUnit: '粒',
+        price: 10,
+        purchaseDate: '2026-03-01',
+        startUseDate: '2026-03-01',
+        totalQuantity: 10,
+        remainingQuantity: 10,
+        category: '其他',
+        colorHex: '#000000',
+      ),
+    );
+
+    await controller.upsert(
+      Supplement(
+        id: 'b',
+        name: 'B',
+        specification: 'Spec',
+        dailyDosage: 1,
+        dosageUnit: '粒',
+        price: 20,
+        purchaseDate: '2026-03-01',
+        startUseDate: '2026-03-02',
+        totalQuantity: 10,
+        remainingQuantity: 10,
+        category: '其他',
+        colorHex: '#000000',
+      ),
+    );
+
+    await controller.upsert(
+      Supplement(
+        id: 'c',
+        name: 'C',
+        specification: 'Spec',
+        dailyDosage: 1,
+        dosageUnit: '粒',
+        price: 30,
+        purchaseDate: '2026-03-01',
+        startUseDate: '2026-03-01',
+        totalQuantity: 10,
+        remainingQuantity: 10,
+        category: '其他',
+        colorHex: '#000000',
+        skippedDates: const ['2026-03-01'],
+      ),
+    );
+
+    final today = DateTime(2026, 3, 1);
+
+    expect(controller.dailyCostTotalAt(today), 1);
+    expect(controller.monthlyCostTotalFrom(today, days: 3), 13);
+  });
 }
 

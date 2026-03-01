@@ -12,9 +12,10 @@ class CategoryPieChart extends StatelessWidget {
   final List<Supplement> supplements;
 
   Map<String, double> _categoryMonthlyCost() {
+    final from = DateTime.now();
     final map = <String, double>{};
     for (final s in supplements) {
-      final monthly = s.dailyCost * 30;
+      final monthly = s.costForNextDays(from: from, days: 30);
       map[s.category] = (map[s.category] ?? 0) + monthly;
     }
     return map;

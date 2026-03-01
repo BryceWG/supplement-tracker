@@ -24,7 +24,8 @@ class MonthlyTrendChart extends StatelessWidget {
   Widget build(BuildContext context) {
     if (supplements.isEmpty) return const SizedBox.shrink();
 
-    final monthlyTotal = supplements.fold<double>(0, (sum, s) => sum + s.dailyCost * 30);
+    final from = DateTime.now();
+    final monthlyTotal = supplements.fold<double>(0, (sum, s) => sum + s.costForNextDays(from: from, days: 30));
     final labels = _last6MonthsLabels();
     final values = List<double>.filled(6, monthlyTotal);
 

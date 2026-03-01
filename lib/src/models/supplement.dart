@@ -96,6 +96,41 @@ class Supplement {
 
   static DateTime startOfDay(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 
+  bool isSkippedOn(DateTime day) {
+    if (skippedDates.isEmpty) return false;
+    final ymd = formatYmd(startOfDay(day));
+    return skippedDates.contains(ymd);
+  }
+
+  bool hasStartedBy(DateTime day) {
+    final start = DateTime.tryParse(startUseDateYmdForCalc(day));
+    if (start == null) return false;
+    return !startOfDay(day).isBefore(startOfDay(start));
+  }
+
+  bool canConsumeOn(DateTime day) {
+    if (dailyDosage <= 0) return false;
+    if (!hasStartedBy(day)) return false;
+    if (isSkippedOn(day)) return false;
+    return estimatedRemainingQuantityAt(day) >= dailyDosage;
+  }
+
+  double dailyCostOn(DateTime day) {
+    if (!canConsumeOn(day)) return 0;
+    return dailyCost;
+  }
+
+  double costForNextDays({required DateTime from, required int days}) {
+    if (days <= 0) return 0;
+
+    final start = startOfDay(from);
+    var total = 0.0;
+    for (var i = 0; i < days; i++) {
+      total += dailyCostOn(start.add(Duration(days: i)));
+    }
+    return total;
+  }
+
   int usedDaysAt(DateTime today) {
     final start = DateTime.tryParse(startUseDateYmdForCalc(today));
     if (start == null) return 0;
