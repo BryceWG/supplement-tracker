@@ -33,7 +33,7 @@ class CategoryPieChart extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('月度花费分布', style: TextStyle(fontWeight: FontWeight.w900)),
+            const Text('月度花费分布', style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 10),
             SizedBox(
               height: 200,
@@ -134,4 +134,3 @@ class _PiePainter extends CustomPainter {
     return false;
   }
 }
-

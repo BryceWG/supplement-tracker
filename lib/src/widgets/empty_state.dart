@@ -27,7 +27,7 @@ class EmptyState extends StatelessWidget {
               const SizedBox(height: 14),
               const Text(
                 '还没有添加补剂',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 6),
               const Text(

@@ -49,7 +49,7 @@ class SupplementCard extends StatelessWidget {
                 children: [
                   Text(
                     supplement.name,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -88,7 +88,7 @@ class SupplementCard extends StatelessWidget {
               children: [
                 Text(
                   Format.currencyCny(supplement.dailyCost),
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 2),
                 const Text('每日', style: TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
@@ -116,4 +116,3 @@ class SupplementCard extends StatelessWidget {
     );
   }
 }
-

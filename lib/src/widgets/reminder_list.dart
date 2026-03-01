@@ -30,7 +30,7 @@ class ReminderList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('提醒', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+        const Text('提醒', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
         const SizedBox(height: 12),
         for (final r in reminders) ...[
           Card(
@@ -52,7 +52,7 @@ class ReminderList extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(r.title, style: const TextStyle(fontWeight: FontWeight.w900)),
+                        Text(r.title, style: const TextStyle(fontWeight: FontWeight.w700)),
                         const SizedBox(height: 3),
                         Text(r.message, style: const TextStyle(color: Color(0xFF8A8A8A), fontSize: 12)),
                       ],

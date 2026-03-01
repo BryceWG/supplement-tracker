@@ -195,18 +195,6 @@ class _TopNavBar extends StatelessWidget implements PreferredSizeWidget {
               ),
               const Spacer(),
               if (MediaQuery.sizeOf(context).width >= 720) ...[
-                _NavChip(label: '首页', selected: true, onTap: () {}),
-                _NavChip(
-                  label: '我的补剂',
-                  selected: false,
-                  onTap: () => _toast(context, '当前版本：功能聚合在首页'),
-                ),
-                _NavChip(
-                  label: '统计',
-                  selected: false,
-                  onTap: () => _toast(context, '当前版本：统计在「数据分析」区块'),
-                ),
-                const SizedBox(width: 8),
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
                     backgroundColor: AppTheme.primary,
@@ -230,42 +218,6 @@ class _TopNavBar extends StatelessWidget implements PreferredSizeWidget {
       ),
     );
   }
-
-  static void _toast(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-}
-
-class _NavChip extends StatelessWidget {
-  const _NavChip({required this.label, required this.selected, required this.onTap});
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final bg = selected ? AppTheme.primaryLight : Colors.transparent;
-    final fg = selected ? AppTheme.primary : const Color(0xFF5A5A5A);
-    return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
-          child: Text(label, style: TextStyle(color: fg, fontWeight: FontWeight.w600, fontSize: 13)),
-        ),
-      ),
-    );
-  }
 }
 
 class _PageHeader extends StatelessWidget {
@@ -278,7 +230,7 @@ class _PageHeader extends StatelessWidget {
       children: [
         Text(
           '营养补剂跟踪器',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Color(0xFF1D1D1D)),
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Color(0xFF1D1D1D)),
         ),
         SizedBox(height: 6),
         Text(
@@ -373,7 +325,7 @@ class _Section extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
         const SizedBox(height: 12),
         child,
       ],

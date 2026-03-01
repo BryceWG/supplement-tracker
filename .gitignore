@@ -33,6 +33,7 @@ Desktop.ini
 **/coverage/
 **/doc/api/
 **/ios/Flutter/.last_build_id
+dist/
 
 # Android (local machine specific / secrets)
 **/android/local.properties

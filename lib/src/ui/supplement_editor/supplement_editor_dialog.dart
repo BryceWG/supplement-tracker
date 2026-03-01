@@ -107,7 +107,7 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                     children: [
                       Text(
                         isEditing ? '编辑补剂' : '添加补剂',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                       ),
                       const Spacer(),
                       IconButton(
