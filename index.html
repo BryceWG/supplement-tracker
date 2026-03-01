@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>补剂管家 - 营养补剂跟踪器</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/framer-motion@10/dist/framer-motion.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #3ebb7f;
+            --primary-dark: #339968;
+            --primary-light: #e8f5ee;
+            --black: #1d1d1d;
+            --dark-grey: #5a5a5a;
+            --grey: #8a8a8a;
+            --light-grey: #f5f5f5;
+            --white: #ffffff;
+            --border: #e5e5e5;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
+            min-height: 100vh;
+            color: var(--black);
+        }
+        
+        /* Navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 100;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--black);
+        }
+        
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .nav-link {
+            padding: 8px 16px;
+            border-radius: 8px;
+            color: var(--dark-grey);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(62, 187, 127, 0.3);
+        }
+        
+        /* Main Content */
+        .main-content {
+            padding: 88px 24px 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* Page Header */
+        .page-header {
+            margin-bottom: 32px;
+        }
+        
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--black);
+            margin-bottom: 8px;
+        }
+        
+        .page-subtitle {
+            color: var(--grey);
+            font-size: 1rem;
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        
+        @media (max-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 640px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .stat-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
+        }
+        
+        .stat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .stat-icon.green {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+        
+        .stat-icon.blue {
+            background: #eff6ff;
+            color: #3b82f6;
+        }
+        
+        .stat-icon.orange {
+            background: #fff7ed;
+            color: #f97316;
+        }
+        
+        .stat-icon.purple {
+            background: #faf5ff;
+            color: #a855f7;
+        }
+        
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--grey);
+            margin-bottom: 4px;
+        }
+        
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--black);
+        }
+        
+        .stat-trend {
+            font-size: 0.75rem;
+            color: var(--grey);
+            margin-top: 4px;
+        }
+        
+        /* Section */
+        .section {
+            margin-bottom: 32px;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--black);
+        }
+        
+        /* Supplement Cards */
+        .supplement-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .supplement-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .supplement-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
+        }
+        
+        .supplement-color {
+            width: 4px;
+            height: 60px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+        
+        .supplement-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .supplement-name {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--black);
+            margin-bottom: 4px;
+        }
+        
+        .supplement-spec {
+            font-size: 0.875rem;
+            color: var(--grey);
+        }
+        
+        .supplement-progress {
+            flex: 1;
+            max-width: 200px;
+        }
+        
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--grey);
+            margin-bottom: 6px;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: var(--light-grey);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .progress-fill.green {
+            background: var(--primary);
+        }
+        
+        .progress-fill.yellow {
+            background: var(--warning);
+        }
+        
+        .progress-fill.red {
+            background: var(--danger);
+        }
+        
+        .supplement-cost {
+            text-align: right;
+            min-width: 80px;
+        }
+        
+        .cost-value {
+            font-weight: 600;
+            font-size: 1.125rem;
+            color: var(--black);
+        }
+        
+        .cost-label {
+            font-size: 0.75rem;
+            color: var(--grey);
+        }
+        
+        .supplement-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--dark-grey);
+        }
+        
+        .btn-icon:hover {
+            background: var(--light-grey);
+            border-color: var(--grey);
+        }
+        
+        .btn-icon.danger:hover {
+            background: #fef2f2;
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+        
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            padding: 24px;
+        }
+        
+        .modal {
+            background: var(--white);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 480px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .modal-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+        
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: var(--light-grey);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .modal-close:hover {
+            background: var(--border);
+        }
+        
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+        }
+        
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+        
+        /* Form */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--black);
+            margin-bottom: 6px;
+        }
+        
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        
+        .btn-secondary {
+            background: var(--white);
+            border: 1px solid var(--border);
+            color: var(--black);
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-secondary:hover {
+            background: var(--light-grey);
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 64px 24px;
+        }
+        
+        .empty-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--primary-light);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            color: var(--primary);
+        }
+        
+        .empty-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--black);
+            margin-bottom: 8px;
+        }
+        
+        .empty-desc {
+            color: var(--grey);
+            margin-bottom: 24px;
+        }
+        
+        /* Charts */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .chart-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        .chart-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        
+        /* Reminders */
+        .reminder-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .reminder-item {
+            background: var(--white);
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        .reminder-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .reminder-icon.red {
+            background: #fef2f2;
+            color: var(--danger);
+        }
+        
+        .reminder-icon.yellow {
+            background: #fffbeb;
+            color: var(--warning);
+        }
+        
+        .reminder-icon.green {
+            background: #f0fdf4;
+            color: var(--success);
+        }
+        
+        .reminder-content {
+            flex: 1;
+        }
+        
+        .reminder-title {
+            font-weight: 500;
+            font-size: 0.875rem;
+            margin-bottom: 2px;
+        }
+        
+        .reminder-desc {
+            font-size: 0.75rem;
+            color: var(--grey);
+        }
+        
+        .reminder-time {
+            font-size: 0.75rem;
+            color: var(--grey);
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        /* Mobile FAB */
+        .fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(62, 187, 127, 0.4);
+            transition: all 0.2s;
+            z-index: 90;
+        }
+        
+        .fab:hover {
+            transform: scale(1.05);
+        }
+        
+        @media (min-width: 769px) {
+            .fab {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+        const { motion, AnimatePresence } = window.Motion;
+        
+        // Icons
+        const Icons = {
+            Pill: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>,
+            Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
+            Wallet: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>,
+            Calendar: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>,
+            TrendingUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></svg>,
+            Edit: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>,
+            Trash: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
+            X: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
+            AlertCircle: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>,
+            Bell: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>,
+            Package: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>,
+        };
+        
+        // Sample data
+        const sampleSupplements = [
+            {
+                id: '1',
+                name: '维生素D3',
+                specification: '2000IU, 180粒',
+                dailyDosage: 1,
+                dosageUnit: '粒',
+                price: 128,
+                purchaseDate: '2024-01-15',
+                totalQuantity: 180,
+                remainingQuantity: 145,
+                category: '维生素',
+                color: '#3ebb7f'
+            },
+            {
+                id: '2',
+                name: '鱼油 Omega-3',
+                specification: '1000mg, 120粒',
+                dailyDosage: 2,
+                dosageUnit: '粒',
+                price: 168,
+                purchaseDate: '2024-02-01',
+                totalQuantity: 120,
+                remainingQuantity: 45,
+                category: '脂肪酸',
+                color: '#3b82f6'
+            },
+            {
+                id: '3',
+                name: '复合维生素B',
+                specification: '100片',
+                dailyDosage: 1,
+                dosageUnit: '片',
+                price: 68,
+                purchaseDate: '2024-01-20',
+                totalQuantity: 100,
+                remainingQuantity: 78,
+                category: '维生素',
+                color: '#f59e0b'
+            },
+            {
+                id: '4',
+                name: '镁元素片',
+                specification: '200mg, 90片',
+                dailyDosage: 1,
+                dosageUnit: '片',
+                price: 88,
+                purchaseDate: '2024-02-10',
+                totalQuantity: 90,
+                remainingQuantity: 82,
+                category: '矿物质',
+                color: '#a855f7'
+            }
+        ];
+        
+        // Utility functions
+        const calculateDailyCost = (supplement) => {
+            const daysSupply = supplement.totalQuantity / supplement.dailyDosage;
+            return supplement.price / daysSupply;
+        };
+        
+        const calculateRemainingDays = (supplement) => {
+            return Math.floor(supplement.remainingQuantity / supplement.dailyDosage);
+        };
+        
+        const formatCurrency = (value) => {
+            return `¥${value.toFixed(2)}`;
+        };
+        
+        // Components
+        const Navbar = ({ onAddClick }) => (
+            <nav className="navbar">
+                <div className="logo">
+                    <div className="logo-icon">
+                        <Icons.Pill />
+                    </div>
+                    <span>补剂管家</span>
+                </div>
+                <div className="nav-links">
+                    <a href="#" className="nav-link active">首页</a>
+                    <a href="#" className="nav-link">我的补剂</a>
+                    <a href="#" className="nav-link">统计</a>
+                </div>
+                <button className="btn-primary" onClick={onAddClick}>
+                    <Icons.Plus />
+                    <span>添加补剂</span>
+                </button>
+            </nav>
+        );
+        
+        const StatCard = ({ icon: Icon, label, value, trend, color, delay }) => (
+            <motion.div 
+                className="stat-card"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay, duration: 0.5, ease: [0.165, 0.84, 0.44, 1] }}
+            >
+                <div className="stat-header">
+                    <div className={`stat-icon ${color}`}>
+                        <Icon />
+                    </div>
+                </div>
+                <div className="stat-label">{label}</div>
+                <div className="stat-value">{value}</div>
+                <div className="stat-trend">{trend}</div>
+            </motion.div>
+        );
+        
+        const SupplementCard = ({ supplement, onEdit, onDelete }) => {
+            const dailyCost = calculateDailyCost(supplement);
+            const remainingDays = calculateRemainingDays(supplement);
+            const progressPercent = (supplement.remainingQuantity / supplement.totalQuantity) * 100;
+            
+            let progressColor = 'green';
+            if (remainingDays <= 14) progressColor = 'red';
+            else if (remainingDays <= 30) progressColor = 'yellow';
+            
+            return (
+                <motion.div 
+                    className="supplement-card"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    whileHover={{ y: -2 }}
+                >
+                    <div className="supplement-color" style={{ background: supplement.color }}></div>
+                    <div className="supplement-info">
+                        <div className="supplement-name">{supplement.name}</div>
+                        <div className="supplement-spec">
+                            {supplement.specification} · 每日{supplement.dailyDosage}{supplement.dosageUnit}
+                        </div>
+                    </div>
+                    <div className="supplement-progress">
+                        <div className="progress-header">
+                            <span>剩余 {remainingDays} 天</span>
+                            <span>{supplement.remainingQuantity}/{supplement.totalQuantity}</span>
+                        </div>
+                        <div className="progress-bar">
+                            <div 
+                                className={`progress-fill ${progressColor}`}
+                                style={{ width: `${progressPercent}%` }}
+                            ></div>
+                        </div>
+                    </div>
+                    <div className="supplement-cost">
+                        <div className="cost-value">{formatCurrency(dailyCost)}</div>
+                        <div className="cost-label">每日</div>
+                    </div>
+                    <div className="supplement-actions">
+                        <button className="btn-icon" onClick={() => onEdit(supplement)}>
+                            <Icons.Edit />
+                        </button>
+                        <button className="btn-icon danger" onClick={() => onDelete(supplement.id)}>
+                            <Icons.Trash />
+                        </button>
+                    </div>
+                </motion.div>
+            );
+        };
+        
+        const EmptyState = ({ onAddClick }) => (
+            <motion.div 
+                className="empty-state"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+            >
+                <div className="empty-icon animate-float">
+                    <Icons.Package />
+                </div>
+                <div className="empty-title">还没有添加补剂</div>
+                <div className="empty-desc">添加您的第一个营养补剂，开始跟踪您的健康投资</div>
+                <button className="btn-primary" onClick={onAddClick}>
+                    <Icons.Plus />
+                    <span>添加补剂</span>
+                </button>
+            </motion.div>
+        );
+        
+        const Modal = ({ isOpen, onClose, title, children, footer }) => (
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div 
+                        className="modal-overlay"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={onClose}
+                    >
+                        <motion.div 
+                            className="modal"
+                            initial={{ opacity: 0, x: 100 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 100 }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="modal-header">
+                                <div className="modal-title">{title}</div>
+                                <button className="modal-close" onClick={onClose}>
+                                    <Icons.X />
+                                </button>
+                            </div>
+                            <div className="modal-body">
+                                {children}
+                            </div>
+                            {footer && (
+                                <div className="modal-footer">
+                                    {footer}
+                                </div>
+                            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        );
+        
+        const SupplementForm = ({ supplement, onSave, onCancel }) => {
+            const [formData, setFormData] = useState(supplement || {
+                name: '',
+                specification: '',
+                dailyDosage: 1,
+                dosageUnit: '粒',
+                price: '',
+                totalQuantity: '',
+                category: '维生素',
+                color: '#3ebb7f'
+            });
+            
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                onSave({
+                    ...formData,
+                    id: supplement?.id || Date.now().toString(),
+                    purchaseDate: new Date().toISOString().split('T')[0],
+                    remainingQuantity: parseInt(formData.totalQuantity) || formData.remainingQuantity
+                });
+            };
+            
+            return (
+                <form onSubmit={handleSubmit}>
+                    <div className="form-group">
+                        <label className="form-label">补剂名称</label>
+                        <input 
+                            className="form-input"
+                            value={formData.name}
+                            onChange={e => setFormData({...formData, name: e.target.value})}
+                            placeholder="例如：维生素D3"
+                            required
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">规格</label>
+                        <input 
+                            className="form-input"
+                            value={formData.specification}
+                            onChange={e => setFormData({...formData, specification: e.target.value})}
+                            placeholder="例如：2000IU, 180粒"
+                            required
+                        />
+                    </div>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label className="form-label">每日服用量</label>
+                            <input 
+                                className="form-input"
+                                type="number"
+                                min="1"
+                                value={formData.dailyDosage}
+                                onChange={e => setFormData({...formData, dailyDosage: parseInt(e.target.value)})}
+                                required
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">单位</label>
+                            <select 
+                                className="form-select"
+                                value={formData.dosageUnit}
+                                onChange={e => setFormData({...formData, dosageUnit: e.target.value})}
+                            >
+                                <option value="粒">粒</option>
+                                <option value="片">片</option>
+                                <option value="滴">滴</option>
+                                <option value="勺">勺</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label className="form-label">购买价格 (¥)</label>
+                            <input 
+                                className="form-input"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={formData.price}
+                                onChange={e => setFormData({...formData, price: parseFloat(e.target.value)})}
+                                placeholder="128"
+                                required
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">总数量</label>
+                            <input 
+                                className="form-input"
+                                type="number"
+                                min="1"
+                                value={formData.totalQuantity}
+                                onChange={e => setFormData({...formData, totalQuantity: parseInt(e.target.value)})}
+                                placeholder="180"
+                                required
+                            />
+                        </div>
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">分类</label>
+                        <select 
+                            className="form-select"
+                            value={formData.category}
+                            onChange={e => setFormData({...formData, category: e.target.value})}
+                        >
+                            <option value="维生素">维生素</option>
+                            <option value="矿物质">矿物质</option>
+                            <option value="脂肪酸">脂肪酸</option>
+                            <option value="益生菌">益生菌</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div className="modal-footer">
+                        <button type="button" className="btn-secondary" onClick={onCancel}>取消</button>
+                        <button type="submit" className="btn-primary">保存</button>
+                    </div>
+                </form>
+            );
+        };
+        
+        const CostChart = ({ supplements }) => {
+            const canvasRef = React.useRef(null);
+            
+            useEffect(() => {
+                if (!canvasRef.current || supplements.length === 0) return;
+                
+                const ctx = canvasRef.current.getContext('2d');
+                
+                // Calculate monthly costs by category
+                const categoryCosts = {};
+                supplements.forEach(s => {
+                    const monthlyCost = calculateDailyCost(s) * 30;
+                    categoryCosts[s.category] = (categoryCosts[s.category] || 0) + monthlyCost;
+                });
+                
+                const data = {
+                    labels: Object.keys(categoryCosts),
+                    datasets: [{
+                        data: Object.values(categoryCosts),
+                        backgroundColor: ['#3ebb7f', '#3b82f6', '#f59e0b', '#a855f7', '#ef4444'],
+                        borderWidth: 0
+                    }]
+                };
+                
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: data,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 15,
+                                    font: { size: 12 }
+                                }
+                            }
+                        },
+                        cutout: '65%'
+                    }
+                });
+            }, [supplements]);
+            
+            if (supplements.length === 0) return null;
+            
+            return (
+                <div className="chart-card">
+                    <div className="chart-title">月度花费分布</div>
+                    <div style={{ height: '200px' }}>
+                        <canvas ref={canvasRef}></canvas>
+                    </div>
+                </div>
+            );
+        };
+        
+        const MonthlyTrendChart = ({ supplements }) => {
+            const canvasRef = React.useRef(null);
+            
+            useEffect(() => {
+                if (!canvasRef.current || supplements.length === 0) return;
+                
+                const ctx = canvasRef.current.getContext('2d');
+                
+                const monthlyTotal = supplements.reduce((sum, s) => sum + calculateDailyCost(s) * 30, 0);
+                
+                // Generate 6 months of data
+                const months = [];
+                const data = [];
+                for (let i = 5; i >= 0; i--) {
+                    const d = new Date();
+                    d.setMonth(d.getMonth() - i);
+                    months.push(d.toLocaleString('zh-CN', { month: 'short' }));
+                    data.push(monthlyTotal);
+                }
+                
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: months,
+                        datasets: [{
+                            label: '月度花费',
+                            data: data,
+                            borderColor: '#3ebb7f',
+                            backgroundColor: 'rgba(62, 187, 127, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#3ebb7f'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: value => '¥' + value.toFixed(0)
+                                }
+                            }
+                        }
+                    }
+                });
+            }, [supplements]);
+            
+            if (supplements.length === 0) return null;
+            
+            return (
+                <div className="chart-card">
+                    <div className="chart-title">花费趋势</div>
+                    <div style={{ height: '200px' }}>
+                        <canvas ref={canvasRef}></canvas>
+                    </div>
+                </div>
+            );
+        };
+        
+        const ReminderItem = ({ type, title, message, time }) => {
+            const icons = {
+                low_stock: Icons.AlertCircle,
+                purchase: Icons.Bell,
+                intake: Icons.Pill
+            };
+            const colors = {
+                low_stock: 'red',
+                purchase: 'yellow',
+                intake: 'green'
+            };
+            const Icon = icons[type] || Icons.Bell;
+            
+            return (
+                <motion.div 
+                    className="reminder-item"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                >
+                    <div className={`reminder-icon ${colors[type]}`}>
+                        <Icon />
+                    </div>
+                    <div className="reminder-content">
+                        <div className="reminder-title">{title}</div>
+                        <div className="reminder-desc">{message}</div>
+                    </div>
+                    <div className="reminder-time">{time}</div>
+                </motion.div>
+            );
+        };
+        
+        // Main App
+        const App = () => {
+            const [supplements, setSupplements] = useState(() => {
+                const saved = localStorage.getItem('supplements');
+                return saved ? JSON.parse(saved) : sampleSupplements;
+            });
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [editingSupplement, setEditingSupplement] = useState(null);
+            
+            useEffect(() => {
+                localStorage.setItem('supplements', JSON.stringify(supplements));
+            }, [supplements]);
+            
+            const stats = useMemo(() => {
+                const dailyCost = supplements.reduce((sum, s) => sum + calculateDailyCost(s), 0);
+                const monthlyCost = dailyCost * 30;
+                const remainingDays = supplements.map(calculateRemainingDays);
+                const shortestRemaining = remainingDays.length > 0 ? Math.min(...remainingDays) : 0;
+                
+                return {
+                    total: supplements.length,
+                    dailyCost,
+                    monthlyCost,
+                    shortestRemaining
+                };
+            }, [supplements]);
+            
+            const handleSave = (supplement) => {
+                if (editingSupplement) {
+                    setSupplements(prev => prev.map(s => s.id === supplement.id ? supplement : s));
+                } else {
+                    setSupplements(prev => [...prev, supplement]);
+                }
+                setIsModalOpen(false);
+                setEditingSupplement(null);
+            };
+            
+            const handleDelete = (id) => {
+                if (confirm('确定要删除这个补剂吗？')) {
+                    setSupplements(prev => prev.filter(s => s.id !== id));
+                }
+            };
+            
+            const handleEdit = (supplement) => {
+                setEditingSupplement(supplement);
+                setIsModalOpen(true);
+            };
+            
+            const handleAdd = () => {
+                setEditingSupplement(null);
+                setIsModalOpen(true);
+            };
+            
+            // Generate reminders
+            const reminders = useMemo(() => {
+                const list = [];
+                supplements.forEach(s => {
+                    const days = calculateRemainingDays(s);
+                    if (days <= 14) {
+                        list.push({
+                            type: 'low_stock',
+                            title: `${s.name} 库存不足`,
+                            message: `仅剩 ${days} 天的用量，建议尽快购买`,
+                            time: '刚刚'
+                        });
+                    }
+                });
+                return list;
+            }, [supplements]);
+            
+            return (
+                <>
+                    <Navbar onAddClick={handleAdd} />
+                    
+                    <main className="main-content">
+                        <div className="page-header">
+                            <h1 className="page-title">健康投资概览</h1>
+                            <p className="page-subtitle">跟踪您的营养补剂，优化健康支出</p>
+                        </div>
+                        
+                        <div className="stats-grid">
+                            <StatCard 
+                                icon={Icons.Pill}
+                                label="正在服用"
+                                value={`${stats.total} 种`}
+                                trend="本月新增 0 种"
+                                color="green"
+                                delay={0}
+                            />
+                            <StatCard 
+                                icon={Icons.Wallet}
+                                label="今日花费"
+                                value={formatCurrency(stats.dailyCost)}
+                                trend="日均花费"
+                                color="blue"
+                                delay={0.08}
+                            />
+                            <StatCard 
+                                icon={Icons.Calendar}
+                                label="最短剩余"
+                                value={`${stats.shortestRemaining} 天`}
+                                trend="最早用完的补剂"
+                                color="orange"
+                                delay={0.16}
+                            />
+                            <StatCard 
+                                icon={Icons.TrendingUp}
+                                label="月度总花费"
+                                value={formatCurrency(stats.monthlyCost)}
+                                trend="预计本月支出"
+                                color="purple"
+                                delay={0.24}
+                            />
+                        </div>
+                        
+                        {supplements.length > 0 ? (
+                            <>
+                                <div className="section">
+                                    <div className="section-header">
+                                        <h2 className="section-title">我的补剂</h2>
+                                    </div>
+                                    <div className="supplement-list">
+                                        <AnimatePresence>
+                                            {supplements.map((s, i) => (
+                                                <SupplementCard 
+                                                    key={s.id}
+                                                    supplement={s}
+                                                    onEdit={handleEdit}
+                                                    onDelete={handleDelete}
+                                                />
+                                            ))}
+                                        </AnimatePresence>
+                                    </div>
+                                </div>
+                                
+                                <div className="section">
+                                    <div className="section-header">
+                                        <h2 className="section-title">数据分析</h2>
+                                    </div>
+                                    <div className="charts-grid">
+                                        <CostChart supplements={supplements} />
+                                        <MonthlyTrendChart supplements={supplements} />
+                                    </div>
+                                </div>
+                                
+                                {reminders.length > 0 && (
+                                    <div className="section">
+                                        <div className="section-header">
+                                            <h2 className="section-title">提醒</h2>
+                                        </div>
+                                        <div className="reminder-list">
+                                            <AnimatePresence>
+                                                {reminders.map((r, i) => (
+                                                    <ReminderItem key={i} {...r} />
+                                                ))}
+                                            </AnimatePresence>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <EmptyState onAddClick={handleAdd} />
+                        )}
+                    </main>
+                    
+                    <button className="fab" onClick={handleAdd}>
+                        <Icons.Plus />
+                    </button>
+                    
+                    <Modal 
+                        isOpen={isModalOpen}
+                        onClose={() => setIsModalOpen(false)}
+                        title={editingSupplement ? '编辑补剂' : '添加补剂'}
+                    >
+                        <SupplementForm 
+                            supplement={editingSupplement}
+                            onSave={handleSave}
+                            onCancel={() => setIsModalOpen(false)}
+                        />
+                    </Modal>
+                </>
+            );
+        };
+        
+        // Render
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
