@@ -1,9 +1,7 @@
 name: Build Installers
 
 on:
-  workflow_dispatch:
   push:
-    branches: [main]
     tags: ["v*"]
 
 concurrency:
