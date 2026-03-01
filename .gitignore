@@ -1,0 +1,58 @@
+# Root .gitignore for this repo (includes Flutter project + templates)
+
+# OS / editor
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*.swp
+*.swo
+*.log
+
+# JetBrains / Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# VS Code (comment out if you want to commit it)
+# .vscode/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Flutter / Dart
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+**/build/
+**/coverage/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+
+# Android (local machine specific / secrets)
+**/android/local.properties
+**/android/**/key.properties
+**/*.jks
+**/*.keystore
+
+# CocoaPods
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+
+# macOS
+**/macos/Pods/
+**/macos/Flutter/ephemeral/
+
+# Windows
+**/windows/flutter/ephemeral/
+
+# Linux
+**/linux/flutter/ephemeral/
+
