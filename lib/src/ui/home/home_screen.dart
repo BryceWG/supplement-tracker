@@ -85,6 +85,59 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _replenish(Supplement supplement) async {
+    final qtyCtrl = TextEditingController(text: '');
+
+    final addQty = await showDialog<int>(
+      context: context,
+      builder: (context) {
+        String? errorText;
+
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text('补充总量'),
+            content: TextField(
+              controller: qtyCtrl,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: '新增数量',
+                hintText: '例如：180',
+                errorText: errorText,
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+              FilledButton(
+                onPressed: () {
+                  final raw = qtyCtrl.text.trim();
+                  final parsed = int.tryParse(raw);
+                  if (parsed == null || parsed <= 0) {
+                    setState(() => errorText = '请输入 >= 1 的数字');
+                    return;
+                  }
+                  Navigator.pop(context, parsed);
+                },
+                child: const Text('确定'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    qtyCtrl.dispose();
+
+    if (addQty == null) return;
+
+    final updated = await widget.controller.replenishQuantity(supplement.id, addQuantity: addQty);
+    if (updated == null) return;
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已为「${updated.name}」补充 +$addQty ${updated.dosageUnit}')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = widget.controller;
@@ -143,6 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   SupplementCard(
                                     supplement: s,
                                     onEdit: () => _openEditor(supplement: s),
+                                    onReplenish: () => _replenish(s),
                                     onPostponeOneDay: () => _postponeOneDay(s),
                                     onDelete: () => _confirmDelete(s),
                                   ),

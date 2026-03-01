@@ -154,6 +154,22 @@ class SupplementsController extends ChangeNotifier {
     return updated;
   }
 
+  Future<Supplement?> replenishQuantity(String supplementId, {required int addQuantity}) async {
+    if (addQuantity <= 0) return null;
+
+    final index = _supplements.indexWhere((s) => s.id == supplementId);
+    if (index < 0) return null;
+
+    final s = _supplements[index];
+    final updated = s.copyWith(
+      totalQuantity: s.totalQuantity + addQuantity,
+      remainingQuantity: s.remainingQuantity + addQuantity,
+    );
+
+    await upsert(updated);
+    return updated;
+  }
+
   double get dailyCostTotal => _supplements.fold(0, (sum, s) => sum + s.dailyCost);
   double get monthlyCostTotal => dailyCostTotal * 30;
 

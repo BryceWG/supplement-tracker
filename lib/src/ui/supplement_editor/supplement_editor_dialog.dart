@@ -65,7 +65,7 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
   }
 
   Future<void> _pickStartUseDate() async {
-    final initial = DateTime.tryParse(_startUseDateYmd) ?? DateTime.now();
+    final initial = DateTime.now();
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,

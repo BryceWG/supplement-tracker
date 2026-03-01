@@ -84,14 +84,42 @@ class Supplement {
     return price / daysSupply;
   }
 
-  int get remainingDays {
+  static DateTime startOfDay(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
+
+  int usedDaysAt(DateTime today) {
+    final start = DateTime.tryParse(effectiveStartUseDateYmd);
+    if (start == null) return 0;
+    final diff = startOfDay(today).difference(startOfDay(start)).inDays;
+    return diff < 0 ? 0 : diff;
+  }
+
+  int estimatedRemainingQuantityAt(DateTime today) {
+    if (dailyDosage <= 0) return remainingQuantity.clamp(0, totalQuantity);
+    final consumed = usedDaysAt(today) * dailyDosage;
+    final left = remainingQuantity - consumed;
+    if (left <= 0) return 0;
+    if (totalQuantity <= 0) return 0;
+    return left > totalQuantity ? totalQuantity : left;
+  }
+
+  int remainingDaysAt(DateTime today) {
     if (dailyDosage <= 0) return 0;
-    return (remainingQuantity / dailyDosage).floor();
+    return (estimatedRemainingQuantityAt(today) / dailyDosage).floor();
+  }
+
+  double remainingPercentAt(DateTime today) {
+    if (totalQuantity <= 0) return 0;
+    return estimatedRemainingQuantityAt(today) / totalQuantity;
+  }
+
+  int get estimatedRemainingQuantity => estimatedRemainingQuantityAt(DateTime.now());
+
+  int get remainingDays {
+    return remainingDaysAt(DateTime.now());
   }
 
   double get remainingPercent {
-    if (totalQuantity <= 0) return 0;
-    return remainingQuantity / totalQuantity;
+    return remainingPercentAt(DateTime.now());
   }
 
   Map<String, Object?> toJson() => {

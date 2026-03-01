@@ -10,12 +10,14 @@ class SupplementCard extends StatelessWidget {
     required this.supplement,
     required this.onEdit,
     required this.onPostponeOneDay,
+    required this.onReplenish,
     required this.onDelete,
   });
 
   final Supplement supplement;
   final VoidCallback onEdit;
   final VoidCallback onPostponeOneDay;
+  final VoidCallback onReplenish;
   final VoidCallback onDelete;
 
   Color _progressColor(int remainingDays) {
@@ -28,6 +30,7 @@ class SupplementCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final remainingDays = supplement.remainingDays;
     final progress = supplement.remainingPercent.clamp(0.0, 1.0);
+    final estimatedRemainingQty = supplement.estimatedRemainingQuantity;
     final stripColor = CategoryColors.fromHex(supplement.colorHex);
     final progressColor = _progressColor(remainingDays);
 
@@ -68,7 +71,7 @@ class SupplementCard extends StatelessWidget {
                       ),
                       const Spacer(),
                       Text(
-                        '${supplement.remainingQuantity}/${supplement.totalQuantity}',
+                        '$estimatedRemainingQty/${supplement.totalQuantity}',
                         style: const TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
                       ),
                     ],
@@ -103,6 +106,11 @@ class SupplementCard extends StatelessWidget {
                       tooltip: '编辑',
                       onPressed: onEdit,
                       icon: const Icon(Icons.edit_outlined),
+                    ),
+                    IconButton(
+                      tooltip: '补充总量',
+                      onPressed: onReplenish,
+                      icon: const Icon(Icons.add_circle_outline),
                     ),
                     IconButton(
                       tooltip: '延期一天',
