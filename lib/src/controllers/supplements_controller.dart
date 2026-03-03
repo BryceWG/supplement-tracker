@@ -7,9 +7,14 @@ import '../models/supplement.dart';
 import '../services/supplements_store.dart';
 
 class SupplementsController extends ChangeNotifier {
-  SupplementsController({required SupplementsStore store}) : _store = store;
+  SupplementsController({
+    required SupplementsStore store,
+    required String defaultProfileName,
+  })  : _store = store,
+        _defaultProfileName = defaultProfileName;
 
   final SupplementsStore _store;
+  final String _defaultProfileName;
 
   bool _initialized = false;
   List<Supplement> _supplements = const [];
@@ -31,7 +36,7 @@ class SupplementsController extends ChangeNotifier {
     _activeProfileId = await _store.loadActiveProfileId();
 
     if (_profiles.isEmpty) {
-      final me = Profile(id: 'me', name: '我');
+      final me = Profile(id: 'me', name: _defaultProfileName);
       _profiles = [me];
       _activeProfileId = me.id;
       await _store.saveProfiles(_profiles);
@@ -226,5 +231,20 @@ class SupplementsController extends ChangeNotifier {
 
     await _store.importBackup(decoded.cast<String, Object?>());
     await reload(seedSampleIfEmpty: false);
+  }
+
+  Future<List<Supplement>> loadAllSupplementsAcrossProfiles() async {
+    if (!_initialized) return const [];
+
+    final activeId = _activeProfileId ?? activeProfile.id;
+    final all = <Supplement>[];
+    for (final p in _profiles) {
+      if (p.id == activeId) {
+        all.addAll(_supplements);
+      } else {
+        all.addAll(await _store.loadSupplements(profileId: p.id));
+      }
+    }
+    return all;
   }
 }

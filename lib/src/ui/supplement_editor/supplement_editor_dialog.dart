@@ -2,14 +2,20 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../../models/supplement.dart';
 import '../../theme/app_theme.dart';
 import '../../util/colors.dart';
 
 class SupplementEditorDialog extends StatefulWidget {
-  const SupplementEditorDialog({super.key, this.supplement});
+  const SupplementEditorDialog({
+    super.key,
+    this.supplement,
+    this.templates = const [],
+  });
 
   final Supplement? supplement;
+  final List<Supplement> templates;
 
   @override
   State<SupplementEditorDialog> createState() => _SupplementEditorDialogState();
@@ -29,6 +35,7 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
   String _category = '维生素';
   late String _startUseDateYmd;
   late List<String> _skippedDates;
+  late final List<Supplement> _templateOptions;
 
   @override
   void initState() {
@@ -45,6 +52,31 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
     _category = s?.category ?? '维生素';
     _startUseDateYmd = s?.startUseDate ?? s?.purchaseDate ?? _todayYmd();
     _skippedDates = [...(s?.skippedDates ?? const [])];
+
+    _templateOptions = _buildTemplateOptions(widget.templates);
+  }
+
+  List<Supplement> _buildTemplateOptions(List<Supplement> raw) {
+    if (raw.isEmpty) return const [];
+
+    final seen = <String>{};
+    final list = <Supplement>[];
+    for (final s in raw) {
+      final key = [
+        s.name,
+        s.specification,
+        s.dailyDosage.toString(),
+        s.dosageUnit,
+        s.price.toString(),
+        s.totalQuantity.toString(),
+        s.category,
+        s.purchaseUrl ?? '',
+      ].join('|');
+      if (seen.add(key)) list.add(s);
+    }
+
+    list.sort((a, b) => a.name.compareTo(b.name));
+    return list;
   }
 
   @override
@@ -67,13 +99,14 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
   }
 
   Future<void> _pickStartUseDate() async {
+    final l10n = context.l10n;
     final initial = DateTime.now();
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
       firstDate: DateTime(2000),
       lastDate: DateTime(DateTime.now().year + 10),
-      helpText: '选择开始使用日期',
+      helpText: l10n.supplementEditorDatePickerHelp,
     );
     if (picked == null) return;
     setState(() => _startUseDateYmd = Supplement.formatYmd(picked));
@@ -120,8 +153,126 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
     Navigator.of(context).pop(result);
   }
 
+  void _applyTemplate(Supplement template) {
+    _name.text = template.name;
+    _spec.text = template.specification;
+    _dailyDosage.text = template.dailyDosage.toString();
+    _price.text = template.price.toString();
+    _totalQty.text = template.totalQuantity.toString();
+    _purchaseUrl.text = template.purchaseUrl ?? '';
+
+    setState(() {
+      _dosageUnit = template.dosageUnit;
+      _category = template.category;
+      _startUseDateYmd = _todayYmd();
+      _skippedDates = const [];
+    });
+  }
+
+  Future<void> _pickTemplate() async {
+    if (_templateOptions.isEmpty) return;
+
+    final l10n = context.l10n;
+    final selected = await showModalBottomSheet<Supplement>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        var query = '';
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final trimmed = query.trim();
+            final lower = trimmed.toLowerCase();
+
+            final filtered = trimmed.isEmpty
+                ? _templateOptions
+                : _templateOptions.where((s) {
+                    return s.name.toLowerCase().contains(lower) || s.specification.toLowerCase().contains(lower);
+                  }).toList();
+
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.supplementEditorTemplatePickerTitle,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search),
+                        hintText: l10n.supplementEditorTemplatePickerSearchHint,
+                      ),
+                      onChanged: (v) => setState(() => query = v),
+                    ),
+                    const SizedBox(height: 12),
+                    Flexible(
+                      child: filtered.isEmpty
+                          ? Center(
+                              child: Text(
+                                l10n.supplementEditorTemplatePickerEmpty,
+                                style: const TextStyle(color: Color(0xFF8A8A8A)),
+                              ),
+                            )
+                          : ListView.separated(
+                              shrinkWrap: true,
+                              itemCount: filtered.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 8),
+                              itemBuilder: (context, index) {
+                                final s = filtered[index];
+                                final unit = dosageUnitLabel(context, s.dosageUnit, count: s.dailyDosage);
+                                final subtitle = '${s.specification} · ${s.dailyDosage}$unit · ${categoryLabel(context, s.category)}';
+
+                                return Material(
+                                  color: const Color(0xFFF5F5F5),
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: () => Navigator.of(context).pop(s),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            s.name,
+                                            style: const TextStyle(fontWeight: FontWeight.w700),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            subtitle,
+                                            style: const TextStyle(color: Color(0xFF8A8A8A), fontSize: 12),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (selected == null) return;
+    _applyTemplate(selected);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final isEditing = widget.supplement != null;
     final isNarrow = MediaQuery.sizeOf(context).width < 600;
 
@@ -141,12 +292,12 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                   Row(
                     children: [
                       Text(
-                        isEditing ? '编辑补剂' : '添加补剂',
+                        isEditing ? l10n.supplementEditorTitleEdit : l10n.supplementEditorTitleAdd,
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                       ),
                       const Spacer(),
                       IconButton(
-                        tooltip: '关闭',
+                        tooltip: l10n.supplementEditorTooltipClose,
                         onPressed: () => Navigator.of(context).pop(),
                         icon: const Icon(Icons.close),
                       ),
@@ -157,16 +308,35 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                     key: _formKey,
                     child: Column(
                       children: [
+                        if (!isEditing && _templateOptions.isNotEmpty) ...[
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: OutlinedButton.icon(
+                              onPressed: _pickTemplate,
+                              icon: const Icon(Icons.history, size: 18),
+                              label: Text(l10n.supplementEditorButtonPickFromExisting),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         TextFormField(
                           controller: _name,
-                          decoration: const InputDecoration(labelText: '补剂名称', hintText: '例如：维生素D3'),
-                          validator: (v) => (v == null || v.trim().isEmpty) ? '请输入补剂名称' : null,
+                          decoration: InputDecoration(
+                            labelText: l10n.supplementEditorFieldNameLabel,
+                            hintText: l10n.supplementEditorFieldNameHint,
+                          ),
+                          validator: (v) =>
+                              (v == null || v.trim().isEmpty) ? l10n.supplementEditorValidationNameRequired : null,
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _spec,
-                          decoration: const InputDecoration(labelText: '规格', hintText: '例如：2000IU, 180粒'),
-                          validator: (v) => (v == null || v.trim().isEmpty) ? '请输入规格' : null,
+                          decoration: InputDecoration(
+                            labelText: l10n.supplementEditorFieldSpecLabel,
+                            hintText: l10n.supplementEditorFieldSpecHint,
+                          ),
+                          validator: (v) =>
+                              (v == null || v.trim().isEmpty) ? l10n.supplementEditorValidationSpecRequired : null,
                         ),
                         const SizedBox(height: 12),
                         Row(
@@ -175,11 +345,11 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                               child: TextFormField(
                                 controller: _dailyDosage,
                                 keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(labelText: '每日服用量'),
+                                decoration: InputDecoration(labelText: l10n.supplementEditorFieldDailyDosageLabel),
                                 validator: (v) {
                                   final raw = (v ?? '').trim();
                                   final parsed = int.tryParse(raw);
-                                  if (parsed == null || parsed < 1) return '请输入 >= 1 的数字';
+                                  if (parsed == null || parsed < 1) return l10n.validationNumberMin1;
                                   return null;
                                 },
                               ),
@@ -188,12 +358,12 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                             Expanded(
                               child: DropdownButtonFormField<String>(
                                 initialValue: _dosageUnit,
-                                decoration: const InputDecoration(labelText: '单位'),
-                                items: const [
-                                  DropdownMenuItem(value: '粒', child: Text('粒')),
-                                  DropdownMenuItem(value: '片', child: Text('片')),
-                                  DropdownMenuItem(value: '滴', child: Text('滴')),
-                                  DropdownMenuItem(value: '勺', child: Text('勺')),
+                                decoration: InputDecoration(labelText: l10n.supplementEditorFieldUnitLabel),
+                                items: [
+                                  DropdownMenuItem(value: '粒', child: Text(dosageUnitLabel(context, '粒', count: 1))),
+                                  DropdownMenuItem(value: '片', child: Text(dosageUnitLabel(context, '片', count: 1))),
+                                  DropdownMenuItem(value: '滴', child: Text(dosageUnitLabel(context, '滴', count: 1))),
+                                  DropdownMenuItem(value: '勺', child: Text(dosageUnitLabel(context, '勺', count: 1))),
                                 ],
                                 onChanged: (v) => setState(() => _dosageUnit = v ?? '粒'),
                               ),
@@ -207,11 +377,14 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                               child: TextFormField(
                                 controller: _price,
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                decoration: const InputDecoration(labelText: '购买价格 (¥)', hintText: '128'),
+                                decoration: InputDecoration(
+                                  labelText: l10n.supplementEditorFieldPriceLabel,
+                                  hintText: l10n.supplementEditorFieldPriceHint,
+                                ),
                                 validator: (v) {
                                   final raw = (v ?? '').trim();
                                   final parsed = double.tryParse(raw);
-                                  if (parsed == null || parsed < 0) return '请输入 >= 0 的数字';
+                                  if (parsed == null || parsed < 0) return l10n.validationNumberMin0;
                                   return null;
                                 },
                               ),
@@ -221,11 +394,14 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                               child: TextFormField(
                                 controller: _totalQty,
                                 keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(labelText: '总数量', hintText: '180'),
+                                decoration: InputDecoration(
+                                  labelText: l10n.supplementEditorFieldTotalQtyLabel,
+                                  hintText: l10n.supplementEditorFieldTotalQtyHint,
+                                ),
                                 validator: (v) {
                                   final raw = (v ?? '').trim();
                                   final parsed = int.tryParse(raw);
-                                  if (parsed == null || parsed < 1) return '请输入 >= 1 的数字';
+                                  if (parsed == null || parsed < 1) return l10n.validationNumberMin1;
                                   return null;
                                 },
                               ),
@@ -240,9 +416,9 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                                 borderRadius: BorderRadius.circular(12),
                                 onTap: _pickStartUseDate,
                                 child: InputDecorator(
-                                  decoration: const InputDecoration(
-                                    labelText: '开始使用日期',
-                                    suffixIcon: Icon(Icons.calendar_today_outlined),
+                                  decoration: InputDecoration(
+                                    labelText: l10n.supplementEditorFieldStartUseDateLabel,
+                                    suffixIcon: const Icon(Icons.calendar_today_outlined),
                                   ),
                                   child: Text(_startUseDateYmd),
                                 ),
@@ -253,7 +429,7 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                               OutlinedButton.icon(
                                 onPressed: _postponeOneDayLocal,
                                 icon: const Icon(Icons.snooze_outlined, size: 18),
-                                label: const Text('跳过今天'),
+                                label: Text(l10n.supplementEditorButtonSkipToday),
                               ),
                             ],
                           ],
@@ -263,7 +439,7 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                           Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              '已跳过 ${_skippedDates.length} 天',
+                              l10n.supplementEditorSkippedDays(_skippedDates.length),
                               style: const TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
                             ),
                           ),
@@ -271,26 +447,29 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
                           initialValue: _category,
-                          decoration: const InputDecoration(labelText: '分类'),
-                          items: const [
-                            DropdownMenuItem(value: '维生素', child: Text('维生素')),
-                            DropdownMenuItem(value: '矿物质', child: Text('矿物质')),
-                            DropdownMenuItem(value: '脂肪酸', child: Text('脂肪酸')),
-                            DropdownMenuItem(value: '益生菌', child: Text('益生菌')),
-                            DropdownMenuItem(value: '其他', child: Text('其他')),
+                          decoration: InputDecoration(labelText: l10n.supplementEditorFieldCategoryLabel),
+                          items: [
+                            DropdownMenuItem(value: '维生素', child: Text(categoryLabel(context, '维生素'))),
+                            DropdownMenuItem(value: '矿物质', child: Text(categoryLabel(context, '矿物质'))),
+                            DropdownMenuItem(value: '脂肪酸', child: Text(categoryLabel(context, '脂肪酸'))),
+                            DropdownMenuItem(value: '益生菌', child: Text(categoryLabel(context, '益生菌'))),
+                            DropdownMenuItem(value: '其他', child: Text(categoryLabel(context, '其他'))),
                           ],
                           onChanged: (v) => setState(() => _category = v ?? '维生素'),
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _purchaseUrl,
-                          decoration: const InputDecoration(labelText: '购买链接（可选）', hintText: 'https://...'),
+                          decoration: InputDecoration(
+                            labelText: l10n.supplementEditorFieldPurchaseUrlLabel,
+                            hintText: l10n.supplementEditorFieldPurchaseUrlHint,
+                          ),
                           keyboardType: TextInputType.url,
                           validator: (v) {
                             final raw = (v ?? '').trim();
                             if (raw.isEmpty) return null;
                             final uri = Uri.tryParse(raw);
-                            if (uri == null || !(uri.hasScheme && uri.hasAuthority)) return '请输入有效的链接（包含 http/https）';
+                            if (uri == null || !(uri.hasScheme && uri.hasAuthority)) return l10n.validationUrlInvalid;
                             return null;
                           },
                         ),
@@ -302,7 +481,7 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                     children: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('取消'),
+                        child: Text(l10n.commonCancel),
                       ),
                       const Spacer(),
                       FilledButton(
@@ -311,7 +490,7 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                           foregroundColor: Colors.white,
                         ),
                         onPressed: _save,
-                        child: const Text('保存'),
+                        child: Text(l10n.commonSave),
                       ),
                     ],
                   ),

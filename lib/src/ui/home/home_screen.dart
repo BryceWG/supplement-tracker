@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../controllers/supplements_controller.dart';
+import '../../l10n/l10n.dart';
 import '../../models/supplement.dart';
 import '../../theme/app_theme.dart';
 import '../../util/format.dart';
@@ -28,13 +29,16 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   Future<void> _openEditor({Supplement? supplement}) async {
+    final templates =
+        supplement == null ? await widget.controller.loadAllSupplementsAcrossProfiles() : const <Supplement>[];
+    if (!mounted) return;
     final result = await showGeneralDialog<Supplement>(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'close',
       barrierColor: Colors.black.withValues(alpha: 0.35),
       pageBuilder: (context, _, __) {
-        return SupplementEditorDialog(supplement: supplement);
+        return SupplementEditorDialog(supplement: supplement, templates: templates);
       },
       transitionDuration: const Duration(milliseconds: 220),
       transitionBuilder: (context, animation, _, child) {
@@ -55,17 +59,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _confirmDelete(Supplement supplement) async {
+    final l10n = context.l10n;
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('确认删除'),
-        content: Text('确定要删除「${supplement.name}」吗？'),
+        title: Text(l10n.homeDialogConfirmDeleteTitle),
+        content: Text(l10n.homeDialogConfirmDeleteContent(supplement.name)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.commonCancel)),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('删除'),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),
@@ -77,6 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _postponeOneDay(Supplement supplement) async {
+    final l10n = context.l10n;
     final beforeStart = supplement.startUseDate;
     final beforeSkipped = supplement.skippedDates.length;
 
@@ -89,18 +95,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
     String message;
     if (startChanged) {
-      message = '已将「${updated.name}」开始使用日期延期至 ${updated.startUseDate ?? updated.effectiveStartUseDateYmd}';
+      message = l10n.homeSnackStartPostponed(
+        updated.name,
+        updated.startUseDate ?? updated.effectiveStartUseDateYmd,
+      );
     } else if (skippedChanged) {
       final today = Supplement.formatYmd(DateTime.now());
-      message = '已为「${updated.name}」跳过 $today（当天不吃）';
+      message = l10n.homeSnackSkippedToday(today, updated.name);
     } else {
-      message = '已更新「${updated.name}」';
+      message = l10n.homeSnackUpdated(updated.name);
     }
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _replenish(Supplement supplement) async {
+    final l10n = context.l10n;
     final qtyCtrl = TextEditingController(text: '');
 
     final addQty = await showDialog<int>(
@@ -110,29 +120,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
         return StatefulBuilder(
           builder: (context, setState) => AlertDialog(
-            title: const Text('补充总量'),
+            title: Text(l10n.homeDialogReplenishTitle),
             content: TextField(
               controller: qtyCtrl,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
-                labelText: '新增数量',
-                hintText: '例如：180',
+                labelText: l10n.homeFieldAddQuantityLabel,
+                hintText: l10n.homeFieldAddQuantityHint,
                 errorText: errorText,
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+              TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.commonCancel)),
               FilledButton(
                 onPressed: () {
                   final raw = qtyCtrl.text.trim();
                   final parsed = int.tryParse(raw);
                   if (parsed == null || parsed <= 0) {
-                    setState(() => errorText = '请输入 >= 1 的数字');
+                    setState(() => errorText = l10n.validationNumberMin1);
                     return;
                   }
                   Navigator.pop(context, parsed);
                 },
-                child: const Text('确定'),
+                child: Text(l10n.commonOk),
               ),
             ],
           ),
@@ -148,8 +158,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (updated == null) return;
     if (!mounted) return;
 
+    final unit = dosageUnitLabel(context, updated.dosageUnit, count: addQty);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('已为「${updated.name}」补充 +$addQty ${updated.dosageUnit}')),
+      SnackBar(content: Text(l10n.homeSnackReplenish(addQty, unit, updated.name))),
     );
   }
 
@@ -205,14 +216,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           shortestRemaining: controller.shortestRemainingDays,
                         ),
                         const SizedBox(height: 20),
-                        if (supplements.isEmpty)
-                          EmptyState(onAdd: () => _openEditor())
-                        else ...[
-                          _Section(
-                            title: '我的补剂',
-                            child: Column(
-                              children: [
-                                for (final s in supplements) ...[
+        if (supplements.isEmpty)
+          EmptyState(onAdd: () => _openEditor())
+        else ...[
+          _Section(
+            title: context.l10n.homeTabSupplements,
+            child: Column(
+              children: [
+                for (final s in supplements) ...[
                                   SupplementCard(
                                     supplement: s,
                                     onEdit: () => _openEditor(supplement: s),
@@ -225,11 +236,11 @@ class _HomeScreenState extends State<HomeScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 18),
-                          _Section(
-                            title: '数据分析',
-                            child: _ChartsGrid(supplements: supplements),
-                          ),
+          const SizedBox(height: 18),
+          _Section(
+            title: context.l10n.homeTabAnalytics,
+            child: _ChartsGrid(supplements: supplements),
+          ),
                           const SizedBox(height: 18),
                         ],
                       ],
@@ -255,6 +266,7 @@ class _TopNavBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return ClipRRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -278,15 +290,12 @@ class _TopNavBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
-                '补剂管家',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
+              Text(l10n.appTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
               const Spacer(),
               _ProfileMenu(controller: controller),
               const SizedBox(width: 6),
               IconButton(
-                tooltip: '导出补剂清单为图片',
+                tooltip: l10n.homeTooltipExportList,
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -298,7 +307,7 @@ class _TopNavBar extends StatelessWidget implements PreferredSizeWidget {
               ),
               const SizedBox(width: 6),
               IconButton(
-                tooltip: '设置',
+                tooltip: l10n.homeTooltipSettings,
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -323,10 +332,11 @@ class _ProfileMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final active = controller.activeProfile;
 
     return PopupMenuButton<String>(
-      tooltip: '切换成员',
+      tooltip: l10n.homeTooltipSwitchProfile,
       position: PopupMenuPosition.under,
       onSelected: (value) async {
         if (value == '_manage') {
@@ -362,13 +372,13 @@ class _ProfileMenu extends StatelessWidget {
 
         items.add(const PopupMenuDivider());
         items.add(
-          const PopupMenuItem<String>(
+          PopupMenuItem<String>(
             value: '_manage',
             child: Row(
               children: [
-                Icon(Icons.group_outlined, size: 18),
-                SizedBox(width: 8),
-                Text('管理成员…'),
+                const Icon(Icons.group_outlined, size: 18),
+                const SizedBox(width: 8),
+                Text(l10n.homeManageProfiles),
               ],
             ),
           ),
@@ -420,6 +430,7 @@ class _StatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -429,30 +440,30 @@ class _StatsGrid extends StatelessWidget {
         final items = [
           StatCardData(
             icon: Icons.inventory_2_outlined,
-            label: '补剂总数',
+            label: l10n.statsTotalSupplementsLabel,
             value: total.toString(),
-            trend: '当前跟踪的补剂数量',
+            trend: l10n.statsTotalSupplementsTrend,
             color: const Color(0xFF22C55E),
           ),
           StatCardData(
             icon: Icons.account_balance_wallet_outlined,
-            label: '今日花费',
+            label: l10n.statsTodayCostLabel,
             value: Format.currencyCny(dailyCost),
-            trend: '日均花费',
+            trend: l10n.statsTodayCostTrend,
             color: const Color(0xFF3B82F6),
           ),
           StatCardData(
             icon: Icons.calendar_month_outlined,
-            label: '最短剩余',
-            value: '$shortestRemaining 天',
-            trend: '最早用完的补剂',
+            label: l10n.statsShortestRemainingLabel,
+            value: l10n.commonDays(shortestRemaining),
+            trend: l10n.statsShortestRemainingTrend,
             color: const Color(0xFFF97316),
           ),
           StatCardData(
             icon: Icons.trending_up,
-            label: '月度总花费',
+            label: l10n.statsMonthlyCostLabel,
             value: Format.currencyCny(monthlyCost),
-            trend: '预计本月支出',
+            trend: l10n.statsMonthlyCostTrend,
             color: const Color(0xFFA855F7),
           ),
         ];
