@@ -150,14 +150,14 @@ class SupplementsController extends ChangeNotifier {
     final now = today ?? DateTime.now();
     final todayDay = Supplement.startOfDay(now);
 
-    final start = DateTime.tryParse(s.startUseDateYmdForCalc(now)) ?? now;
-    final startDay = Supplement.startOfDay(start);
+    final start = DateTime.tryParse(s.startUseDate ?? '');
+    final startDay = Supplement.startOfDay(start ?? todayDay);
 
     // If the supplement hasn't started yet, postponing means moving the start day later.
     // If it has started, postponing means "skip today" (do not consume today).
     final Supplement updated;
-    if (todayDay.isBefore(startDay)) {
-      final next = startDay.add(const Duration(days: 1));
+    if (start == null || todayDay.isBefore(startDay)) {
+      final next = Supplement.addDays(startDay, 1);
       updated = s.copyWith(startUseDate: Supplement.formatYmd(next));
     } else {
       final ymd = Supplement.formatYmd(todayDay);

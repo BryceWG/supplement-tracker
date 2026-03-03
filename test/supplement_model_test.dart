@@ -11,7 +11,7 @@ void main() {
       id: 'x',
       name: 'Test',
       specification: 'Spec',
-      dailyDosage: 1,
+      dailyDosage: 3,
       dosageUnit: '粒',
       price: 10,
       purchaseDate: '2026-03-01',
@@ -22,6 +22,10 @@ void main() {
       category: '其他',
       colorHex: '#000000',
       skippedDates: const ['2026-03-03'],
+      dosageChanges: const [
+        DosageChange(effectiveDate: '2026-03-02', dailyDosage: 1),
+        DosageChange(effectiveDate: '2026-03-03', dailyDosage: 3),
+      ],
     );
 
     final encoded = Supplement.encodeList([s]);
@@ -29,6 +33,9 @@ void main() {
     expect(decoded.startUseDate, '2026-03-02');
     expect(decoded.purchaseUrl, 'https://example.com/item');
     expect(decoded.skippedDates, ['2026-03-03']);
+    expect(decoded.dosageChanges.length, 2);
+    expect(decoded.dosageChanges.first.effectiveDate, '2026-03-02');
+    expect(decoded.dosageChanges.first.dailyDosage, 1);
   });
 
   test('Remaining days follows start date', () {
@@ -47,9 +54,9 @@ void main() {
       colorHex: '#000000',
     );
 
-    expect(s.remainingDaysAt(DateTime(2026, 3, 1)), 5);
-    expect(s.remainingDaysAt(DateTime(2026, 3, 3)), 3);
-    expect(s.estimatedRemainingQuantityAt(DateTime(2026, 3, 3)), 6);
+    expect(s.remainingDaysAt(DateTime(2026, 3, 1)), 4);
+    expect(s.remainingDaysAt(DateTime(2026, 3, 3)), 2);
+    expect(s.estimatedRemainingQuantityAt(DateTime(2026, 3, 3)), 4);
   });
 
   test('Remaining uses totalQuantity as baseline', () {
@@ -68,8 +75,8 @@ void main() {
       colorHex: '#000000',
     );
 
-    expect(s.remainingDaysAt(DateTime(2026, 3, 1)), 59);
-    expect(s.estimatedRemainingQuantityAt(DateTime(2026, 3, 1)), 118);
+    expect(s.remainingDaysAt(DateTime(2026, 3, 1)), 58);
+    expect(s.estimatedRemainingQuantityAt(DateTime(2026, 3, 1)), 116);
   });
 
   test('Skipping a day delays consumption', () {
@@ -89,12 +96,12 @@ void main() {
       skippedDates: const ['2026-03-02'],
     );
 
-    // On 3/3, two days have passed since 3/1, but 3/2 was skipped, so only 1 day is consumed.
-    expect(s.estimatedRemainingQuantityAt(DateTime(2026, 3, 3)), 8);
-    expect(s.remainingDaysAt(DateTime(2026, 3, 3)), 4);
+    // On 3/3, 3/2 was skipped, so only 3/1 and 3/3 are consumed.
+    expect(s.estimatedRemainingQuantityAt(DateTime(2026, 3, 3)), 6);
+    expect(s.remainingDaysAt(DateTime(2026, 3, 3)), 3);
   });
 
-  test('Controller postponeStartUseOneDay skips today', () async {
+  test('Controller postponeStartUseOneDay moves start date when not started', () async {
     SharedPreferences.setMockInitialValues({});
 
     final controller = SupplementsController(store: SupplementsStore(), defaultProfileName: 'Me');
@@ -122,7 +129,33 @@ void main() {
       today: DateTime(2026, 3, 1),
     );
     expect(skipped, isNotNull);
-    expect(skipped!.skippedDates, contains('2026-03-01'));
+    expect(skipped!.startUseDate, '2026-03-02');
+  });
+
+  test('Changing daily dosage does not affect past consumption', () {
+    final s = Supplement(
+      id: 'x',
+      name: 'Test',
+      specification: 'Spec',
+      dailyDosage: 3, // current dosage
+      dosageUnit: '粒',
+      price: 10,
+      purchaseDate: '2026-03-01',
+      startUseDate: '2026-03-01',
+      totalQuantity: 100,
+      remainingQuantity: 100,
+      category: '其他',
+      colorHex: '#000000',
+      dosageChanges: const [
+        DosageChange(effectiveDate: '2026-03-01', dailyDosage: 2),
+        DosageChange(effectiveDate: '2026-03-11', dailyDosage: 3),
+      ],
+    );
+
+    expect(s.dailyDosageOn(DateTime(2026, 3, 10)), 2);
+    expect(s.dailyDosageOn(DateTime(2026, 3, 11)), 3);
+    expect(s.estimatedRemainingQuantityAt(DateTime(2026, 3, 10)), 80);
+    expect(s.estimatedRemainingQuantityAt(DateTime(2026, 3, 11)), 77);
   });
 
   test('Controller replenishQuantity increases totals', () async {

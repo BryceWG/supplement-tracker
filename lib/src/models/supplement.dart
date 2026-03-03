@@ -4,6 +4,39 @@ import '../util/colors.dart';
 
 const _noChange = Object();
 
+class DosageChange {
+  const DosageChange({
+    required this.effectiveDate,
+    required this.dailyDosage,
+  });
+
+  /// yyyy-MM-dd
+  final String effectiveDate;
+
+  final int dailyDosage;
+
+  Map<String, Object?> toJson() => {
+        'effectiveDate': effectiveDate,
+        'dailyDosage': dailyDosage,
+      };
+
+  static DosageChange? tryFromJson(Object? raw) {
+    if (raw is! Map) return null;
+    final date = raw['effectiveDate'];
+    final dosage = raw['dailyDosage'];
+    if (date is! String) return null;
+    if (dosage is! num) return null;
+
+    final parsed = DateTime.tryParse(date);
+    if (parsed == null) return null;
+    final normalized = Supplement.formatYmd(Supplement.startOfDay(parsed));
+
+    final dailyDosage = dosage.toInt();
+    if (dailyDosage <= 0) return null;
+    return DosageChange(effectiveDate: normalized, dailyDosage: dailyDosage);
+  }
+}
+
 class Supplement {
   Supplement({
     required this.id,
@@ -20,7 +53,10 @@ class Supplement {
     required this.category,
     required this.colorHex,
     List<String>? skippedDates,
-  }) : skippedDates = List.unmodifiable(skippedDates ?? const []);
+    List<DosageChange>? dosageChanges,
+  })  : skippedDates = List.unmodifiable(skippedDates ?? const []),
+        dosageChanges = List.unmodifiable((dosageChanges ?? const []).toList()
+          ..sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate)));
 
   final String id;
   final String name;
@@ -36,14 +72,9 @@ class Supplement {
   final String category;
   final String colorHex;
   final List<String> skippedDates;
+  final List<DosageChange> dosageChanges;
 
   String get effectiveStartUseDateYmd => startUseDate ?? purchaseDate;
-
-  String startUseDateYmdForCalc(DateTime today) {
-    // Legacy data might not have `startUseDate`. In that case, treat it as "not started yet",
-    // so remaining days won't suddenly drop just because `purchaseDate` is old.
-    return startUseDate ?? formatYmd(today);
-  }
 
   static DateTime parseYmd(String ymd) => DateTime.parse(ymd);
 
@@ -69,6 +100,7 @@ class Supplement {
     String? category,
     String? colorHex,
     Object? skippedDates = _noChange,
+    Object? dosageChanges = _noChange,
   }) {
     return Supplement(
       id: id ?? this.id,
@@ -85,6 +117,7 @@ class Supplement {
       category: category ?? this.category,
       colorHex: colorHex ?? this.colorHex,
       skippedDates: identical(skippedDates, _noChange) ? this.skippedDates : skippedDates as List<String>?,
+      dosageChanges: identical(dosageChanges, _noChange) ? this.dosageChanges : dosageChanges as List<DosageChange>?,
     );
   }
 
@@ -96,6 +129,11 @@ class Supplement {
 
   static DateTime startOfDay(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 
+  static DateTime addDays(DateTime day, int days) {
+    final d = startOfDay(day);
+    return DateTime(d.year, d.month, d.day + days);
+  }
+
   bool isSkippedOn(DateTime day) {
     if (skippedDates.isEmpty) return false;
     final ymd = formatYmd(startOfDay(day));
@@ -103,80 +141,120 @@ class Supplement {
   }
 
   bool hasStartedBy(DateTime day) {
-    final start = DateTime.tryParse(startUseDateYmdForCalc(day));
+    final start = DateTime.tryParse(startUseDate ?? '');
     if (start == null) return false;
     return !startOfDay(day).isBefore(startOfDay(start));
   }
 
+  int dailyDosageOn(DateTime day) {
+    if (dosageChanges.isEmpty) return dailyDosage;
+
+    final ymd = formatYmd(startOfDay(day));
+    DosageChange? selected;
+    for (final c in dosageChanges) {
+      if (c.effectiveDate.compareTo(ymd) <= 0) {
+        selected = c;
+      } else {
+        break;
+      }
+    }
+    return selected?.dailyDosage ?? dailyDosage;
+  }
+
+  int estimatedRemainingQuantityBeforeConsumptionAt(DateTime day) {
+    if (totalQuantity <= 0) return 0;
+
+    final start = DateTime.tryParse(startUseDate ?? '');
+    if (start == null) return totalQuantity;
+
+    final startDay = startOfDay(start);
+    final dayDay = startOfDay(day);
+    if (dayDay.isBefore(startDay)) return totalQuantity;
+
+    final skipped = skippedDates.isEmpty ? const <String>{} : skippedDates.toSet();
+
+    var remaining = totalQuantity;
+    var cursor = startDay;
+    final endDay = addDays(dayDay, -1);
+    while (!cursor.isAfter(endDay)) {
+      if (remaining <= 0) break;
+      final ymd = formatYmd(cursor);
+      if (!skipped.contains(ymd)) {
+        final dose = dailyDosageOn(cursor);
+        if (dose > 0 && remaining >= dose) {
+          remaining -= dose;
+        }
+      }
+      cursor = addDays(cursor, 1);
+    }
+
+    return remaining;
+  }
+
   bool canConsumeOn(DateTime day) {
-    if (dailyDosage <= 0) return false;
+    final dose = dailyDosageOn(day);
+    if (dose <= 0) return false;
     if (!hasStartedBy(day)) return false;
     if (isSkippedOn(day)) return false;
-    return estimatedRemainingQuantityAt(day) >= dailyDosage;
+    return estimatedRemainingQuantityBeforeConsumptionAt(day) >= dose;
   }
 
   double dailyCostOn(DateTime day) {
-    if (!canConsumeOn(day)) return 0;
-    return dailyCost;
+    final dose = dailyDosageOn(day);
+    if (dose <= 0) return 0;
+    if (totalQuantity <= 0) return 0;
+    if (!hasStartedBy(day)) return 0;
+    if (isSkippedOn(day)) return 0;
+
+    final remainingBefore = estimatedRemainingQuantityBeforeConsumptionAt(day);
+    if (remainingBefore < dose) return 0;
+
+    return (price / totalQuantity) * dose;
   }
 
   double costForNextDays({required DateTime from, required int days}) {
     if (days <= 0) return 0;
 
     final start = startOfDay(from);
+    var remaining = estimatedRemainingQuantityBeforeConsumptionAt(start);
+    if (remaining <= 0) return 0;
+
+    final skipped = skippedDates.isEmpty ? const <String>{} : skippedDates.toSet();
     var total = 0.0;
     for (var i = 0; i < days; i++) {
-      total += dailyCostOn(start.add(Duration(days: i)));
+      final day = addDays(start, i);
+      if (!hasStartedBy(day)) continue;
+
+      final ymd = formatYmd(day);
+      if (skipped.contains(ymd)) continue;
+
+      final dose = dailyDosageOn(day);
+      if (dose <= 0) continue;
+      if (remaining < dose) continue;
+
+      total += (price / totalQuantity) * dose;
+      remaining -= dose;
+      if (remaining <= 0) break;
     }
     return total;
   }
 
-  int usedDaysAt(DateTime today) {
-    final start = DateTime.tryParse(startUseDateYmdForCalc(today));
-    if (start == null) return 0;
-    final diff = startOfDay(today).difference(startOfDay(start)).inDays;
-    return diff < 0 ? 0 : diff;
-  }
-
-  int skippedDaysBefore(DateTime today) {
-    if (skippedDates.isEmpty) return 0;
-
-    final start = DateTime.tryParse(startUseDateYmdForCalc(today));
-    if (start == null) return 0;
-    final startDay = startOfDay(start);
-    final todayDay = startOfDay(today);
-
-    var count = 0;
-    for (final ymd in skippedDates) {
-      final date = DateTime.tryParse(ymd);
-      if (date == null) continue;
-      final day = startOfDay(date);
-      if (day.isBefore(startDay)) continue;
-      if (day.isBefore(todayDay)) count++;
-    }
-    return count;
-  }
-
-  int consumedDaysAt(DateTime today) {
-    final used = usedDaysAt(today);
-    final skipped = skippedDaysBefore(today);
-    final consumed = used - skipped;
-    return consumed < 0 ? 0 : consumed;
-  }
-
   int estimatedRemainingQuantityAt(DateTime today) {
-    if (totalQuantity <= 0) return 0;
-    if (dailyDosage <= 0) return totalQuantity;
+    final remainingBefore = estimatedRemainingQuantityBeforeConsumptionAt(today);
+    if (remainingBefore <= 0) return 0;
+    if (!hasStartedBy(today)) return remainingBefore;
+    if (isSkippedOn(today)) return remainingBefore;
 
-    final consumed = consumedDaysAt(today) * dailyDosage;
-    final left = totalQuantity - consumed;
-    if (left <= 0) return 0;
-    return left > totalQuantity ? totalQuantity : left;
+    final dose = dailyDosageOn(today);
+    if (dose <= 0) return remainingBefore;
+    if (remainingBefore < dose) return remainingBefore;
+    return remainingBefore - dose;
   }
 
   int remainingDaysAt(DateTime today) {
-    if (dailyDosage <= 0) return 0;
-    return (estimatedRemainingQuantityAt(today) / dailyDosage).floor();
+    final dose = dailyDosageOn(today);
+    if (dose <= 0) return 0;
+    return (estimatedRemainingQuantityAt(today) / dose).floor();
   }
 
   double remainingPercentAt(DateTime today) {
@@ -209,11 +287,17 @@ class Supplement {
         'category': category,
         'color': colorHex,
         if (skippedDates.isNotEmpty) 'skippedDates': skippedDates,
+        if (dosageChanges.isNotEmpty) 'dosageChanges': dosageChanges.map((c) => c.toJson()).toList(),
       };
 
   static Supplement fromJson(Map<String, Object?> json) {
     final category = json['category'] as String;
     final skipped = (json['skippedDates'] as List?)?.cast<String>();
+    final rawChanges = json['dosageChanges'];
+    final changes = rawChanges is List
+        ? rawChanges.map(DosageChange.tryFromJson).whereType<DosageChange>().toList()
+        : <DosageChange>[];
+    changes.sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate));
     return Supplement(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -229,6 +313,7 @@ class Supplement {
       category: category,
       colorHex: (json['color'] as String?) ?? CategoryColors.hexForCategory(category),
       skippedDates: skipped,
+      dosageChanges: changes,
     );
   }
 

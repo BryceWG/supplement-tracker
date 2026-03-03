@@ -127,12 +127,30 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
     final dailyDosage = int.parse(_dailyDosage.text.trim());
     final price = double.parse(_price.text.trim());
     final totalQty = int.parse(_totalQty.text.trim());
+    final todayYmd = _todayYmd();
 
     final colorHex = existing?.colorHex ?? CategoryColors.hexForCategory(_category);
     final id = existing?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
     final purchaseUrl = _purchaseUrl.text.trim();
 
-    final purchaseDate = existing?.purchaseDate ?? _todayYmd();
+    final purchaseDate = existing?.purchaseDate ?? todayYmd;
+
+    List<DosageChange> dosageChanges = existing?.dosageChanges ?? const <DosageChange>[];
+    if (existing != null && dailyDosage != existing.dailyDosage) {
+      final list = [...existing.dosageChanges];
+      if (list.isEmpty) {
+        final baselineDate =
+            (existing.startUseDate != null && existing.startUseDate!.compareTo(existing.purchaseDate) < 0)
+                ? existing.startUseDate!
+                : existing.purchaseDate;
+        list.add(DosageChange(effectiveDate: baselineDate, dailyDosage: existing.dailyDosage));
+      }
+
+      list.removeWhere((c) => c.effectiveDate == todayYmd);
+      list.add(DosageChange(effectiveDate: todayYmd, dailyDosage: dailyDosage));
+      list.sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate));
+      dosageChanges = list;
+    }
     final result = Supplement(
       id: id,
       name: _name.text.trim(),
@@ -148,6 +166,7 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
       category: _category,
       colorHex: colorHex,
       skippedDates: _skippedDates,
+      dosageChanges: dosageChanges,
     );
 
     Navigator.of(context).pop(result);
