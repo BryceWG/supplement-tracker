@@ -10,6 +10,7 @@ import 'backup_file_service.dart';
 class _BackupFileServiceWeb implements BackupFileService {
   @override
   Future<bool> saveJson({
+    required String dialogTitle,
     required String suggestedFileName,
     required String json,
   }) async {
@@ -29,9 +30,9 @@ class _BackupFileServiceWeb implements BackupFileService {
   }
 
   @override
-  Future<String?> pickJson() async {
+  Future<String?> pickJson({required String dialogTitle}) async {
     final result = await FilePicker.platform.pickFiles(
-      dialogTitle: '选择要导入的备份文件',
+      dialogTitle: dialogTitle,
       type: FileType.custom,
       allowedExtensions: const ['json'],
       withData: true,

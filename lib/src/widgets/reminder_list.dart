@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../models/supplement.dart';
 
 class ReminderList extends StatelessWidget {
@@ -9,6 +10,7 @@ class ReminderList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final reminders = <_Reminder>[];
     for (final s in supplements) {
       final days = s.remainingDays;
@@ -17,9 +19,9 @@ class ReminderList extends StatelessWidget {
           _Reminder(
             icon: Icons.warning_amber_rounded,
             color: const Color(0xFFEF4444),
-            title: '${s.name} 库存不足',
-            message: '仅剩 $days 天的用量，建议尽快购买',
-            time: '刚刚',
+            title: l10n.reminderLowStockTitle(s.name),
+            message: l10n.reminderLowStockMessage(days),
+            time: l10n.reminderJustNow,
           ),
         );
       }
@@ -30,7 +32,7 @@ class ReminderList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('提醒', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+        Text(l10n.reminderSectionTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
         const SizedBox(height: 12),
         for (final r in reminders) ...[
           Card(

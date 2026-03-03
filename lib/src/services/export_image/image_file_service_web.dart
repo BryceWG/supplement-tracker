@@ -8,6 +8,8 @@ import 'image_file_service.dart';
 class _ImageFileServiceWeb implements ImageFileService {
   @override
   Future<bool> savePng({
+    required String dialogTitle,
+    required String shareSubject,
     required String suggestedFileName,
     required Uint8List pngBytes,
   }) async {
@@ -30,4 +32,3 @@ class _ImageFileServiceWeb implements ImageFileService {
 }
 
 ImageFileService createImageFileServiceImpl() => _ImageFileServiceWeb();
-

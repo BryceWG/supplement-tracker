@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import '../../controllers/supplements_controller.dart';
+import '../../l10n/l10n.dart';
 import '../../models/supplement.dart';
 import '../../services/export_image/image_file_service_factory.dart';
 import '../../theme/app_theme.dart';
@@ -51,13 +52,13 @@ class _SupplementListExportScreenState extends State<SupplementListExportScreen>
     final renderObject = _boundaryKey.currentContext?.findRenderObject();
     final boundary = renderObject is RenderRepaintBoundary ? renderObject : null;
     if (boundary == null) {
-      throw StateError('无法获取要导出的区域');
+      throw StateError('render boundary not found');
     }
 
     final image = await boundary.toImage(pixelRatio: pixelRatio);
     try {
       final data = await image.toByteData(format: ui.ImageByteFormat.png);
-      if (data == null) throw StateError('图片生成失败');
+      if (data == null) throw StateError('png encode failed');
       return data.buffer.asUint8List();
     } finally {
       image.dispose();
@@ -67,9 +68,10 @@ class _SupplementListExportScreenState extends State<SupplementListExportScreen>
   Future<void> _export() async {
     if (_busy) return;
 
+    final l10n = context.l10n;
     final supplements = widget.controller.supplements;
     if (supplements.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('当前没有补剂可导出')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.exportListSnackNoSupplements)));
       return;
     }
 
@@ -79,6 +81,8 @@ class _SupplementListExportScreenState extends State<SupplementListExportScreen>
       final pixelRatio = MediaQuery.of(context).devicePixelRatio.clamp(2.0, 3.0).toDouble();
       final pngBytes = await _capturePngBytes(pixelRatio: pixelRatio);
       final ok = await _fileService.savePng(
+        dialogTitle: l10n.filePickerChooseExportLocation,
+        shareSubject: l10n.shareSubjectSupplementList,
         suggestedFileName: _buildSuggestedFileName(),
         pngBytes: pngBytes,
       );
@@ -86,12 +90,15 @@ class _SupplementListExportScreenState extends State<SupplementListExportScreen>
       if (!mounted) return;
       if (ok) {
         final mobile = !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
-        final message = mobile ? '已打开系统分享（可保存/发送图片）' : '已导出 PNG 图片';
+        final message = mobile ? l10n.exportListSnackShareOpened : l10n.exportListSnackPngExported;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导出失败：$e')));
+      final error = e is StateError ? l10n.errorUnableToExportImage : e.toString();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.exportListSnackExportFailed(error.toString()))),
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -99,16 +106,17 @@ class _SupplementListExportScreenState extends State<SupplementListExportScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final controller = widget.controller;
     final supplements = controller.supplements;
     final isMobile = !kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
-    final actionLabel = isMobile ? '分享 PNG' : '下载 PNG';
+    final actionLabel = isMobile ? l10n.exportListActionSharePng : l10n.exportListActionDownloadPng;
     final actionIcon = isMobile ? Icons.share_outlined : Icons.download_outlined;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('导出补剂清单'),
+        title: Text(l10n.exportListTitle),
         actions: [
           IconButton(
             tooltip: actionLabel,
@@ -135,18 +143,17 @@ class _SupplementListExportScreenState extends State<SupplementListExportScreen>
                         children: [
                           LayoutBuilder(
                             builder: (context, constraints) {
-                              const title = Text(
-                                '导出为图片（PNG）',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                              return Text(
+                                l10n.exportListCardTitlePng,
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
                               );
-                              return title;
                             },
                           ),
                           const SizedBox(height: 6),
                           Text(
                             isMobile
-                                ? '点击右上角或下方按钮即可分享当前成员的补剂清单（适合发给朋友/营养师）。'
-                                : '点击右上角或下方按钮即可下载当前成员的补剂清单图片（PNG）。',
+                                ? l10n.exportListCardDescriptionMobile
+                                : l10n.exportListCardDescriptionDesktop,
                             style: TextStyle(color: Colors.black.withValues(alpha: 0.60)),
                           ),
                           const SizedBox(height: 12),
@@ -239,6 +246,7 @@ class _ExportListSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -255,18 +263,30 @@ class _ExportListSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _BrandHeader(
-            title: '$profileName 的补剂清单',
-            subtitle: '一份可分享的补剂清单',
-            meta: '导出：${_ymdHm(exportedAt)}',
+            title: l10n.exportListHeaderTitle(profileName),
+            subtitle: l10n.exportListHeaderSubtitle,
+            meta: l10n.exportListHeaderMeta(_ymdHm(exportedAt)),
           ),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              _InfoChip(icon: Icons.inventory_2_outlined, label: '补剂数', value: supplements.length.toString()),
-              _InfoChip(icon: Icons.account_balance_wallet_outlined, label: '今日花费', value: Format.currencyCny(dailyCostTotal)),
-              _InfoChip(icon: Icons.calendar_month_outlined, label: '月度总花费', value: Format.currencyCny(monthlyCostTotal)),
+              _InfoChip(
+                icon: Icons.inventory_2_outlined,
+                label: l10n.exportListInfoChipSupplementsCountLabel,
+                value: supplements.length.toString(),
+              ),
+              _InfoChip(
+                icon: Icons.account_balance_wallet_outlined,
+                label: l10n.exportListInfoChipTodayCostLabel,
+                value: Format.currencyCny(dailyCostTotal),
+              ),
+              _InfoChip(
+                icon: Icons.calendar_month_outlined,
+                label: l10n.exportListInfoChipMonthlyCostLabel,
+                value: Format.currencyCny(monthlyCostTotal),
+              ),
             ],
           ),
           const SizedBox(height: 14),
@@ -283,12 +303,12 @@ class _ExportListSheet extends StatelessWidget {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  '可分享给朋友/营养师，便于快速了解你的补剂情况',
+                  l10n.exportListHintShare,
                   style: TextStyle(fontSize: 12, color: Colors.black.withValues(alpha: 0.55)),
                 ),
               ),
               Text(
-                '补剂管家',
+                l10n.appTitle,
                 style: TextStyle(fontSize: 12, color: Colors.black.withValues(alpha: 0.55), fontWeight: FontWeight.w700),
               ),
             ],
@@ -425,11 +445,16 @@ class _SupplementRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final stripColor = CategoryColors.fromHex(supplement.colorHex);
     final remainingDays = supplement.remainingDays;
     final estimatedRemainingQty = supplement.estimatedRemainingQuantity;
     final progress = supplement.remainingPercent.clamp(0.0, 1.0);
     final progressColor = _progressColor(remainingDays);
+
+    final unit = dosageUnitLabel(context, supplement.dosageUnit, count: supplement.dailyDosage);
+    final category = categoryLabel(context, supplement.category);
+    final startDate = supplement.startUseDate ?? l10n.commonNotSet;
 
     return Container(
       decoration: BoxDecoration(
@@ -482,21 +507,21 @@ class _SupplementRow extends StatelessWidget {
                       children: [
                         _MiniChip(
                           color: CategoryColors.forCategory(supplement.category),
-                          text: supplement.category,
+                          text: category,
                         ),
                         Text(
                           supplement.specification,
                           style: const TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
                         ),
                         Text(
-                          '每日${supplement.dailyDosage}${supplement.dosageUnit}',
+                          l10n.exportListItemDailyDosage(supplement.dailyDosage, unit),
                           style: const TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
                         ),
                       ],
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '开始：${supplement.startUseDate ?? '未设置'} · 数量：$estimatedRemainingQty/${supplement.totalQuantity}',
+                      l10n.exportListItemMeta(startDate, estimatedRemainingQty, supplement.totalQuantity),
                       style: const TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
                     ),
                   ],
@@ -511,7 +536,7 @@ class _SupplementRow extends StatelessWidget {
                     style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 2),
-                  const Text('每日', style: TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
+                  Text(l10n.commonPerDay, style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
                 ],
               ),
             ],
@@ -540,6 +565,7 @@ class _StatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -548,7 +574,7 @@ class _StatusPill extends StatelessWidget {
         border: Border.all(color: color.withValues(alpha: 0.20)),
       ),
       child: Text(
-        '剩余 $days 天',
+        l10n.exportListItemRemaining(days),
         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: color),
       ),
     );

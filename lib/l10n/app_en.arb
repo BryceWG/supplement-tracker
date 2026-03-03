@@ -1,0 +1,271 @@
+{
+  "appTitle": "Supplement Tracker",
+  "commonCancel": "Cancel",
+  "commonDelete": "Delete",
+  "commonClose": "Close",
+  "commonSave": "Save",
+  "commonOk": "OK",
+  "commonNotSet": "Not set",
+  "commonPerDay": "per day",
+  "commonDays": "{count, plural, one{{count} day} other{{count} days}}",
+  "@commonDays": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "unitCapsule": "{count, plural, one{capsule} other{capsules}}",
+  "@unitCapsule": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "unitTablet": "{count, plural, one{tablet} other{tablets}}",
+  "@unitTablet": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "unitDrop": "{count, plural, one{drop} other{drops}}",
+  "@unitDrop": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "unitScoop": "{count, plural, one{scoop} other{scoops}}",
+  "@unitScoop": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "categoryVitamins": "Vitamins",
+  "categoryMinerals": "Minerals",
+  "categoryFattyAcids": "Fatty acids",
+  "categoryProbiotics": "Probiotics",
+  "categoryOther": "Other",
+  "homeTabSupplements": "My Supplements",
+  "homeTabAnalytics": "Analytics",
+  "homeTooltipExportList": "Export supplement list image",
+  "homeTooltipSettings": "Settings",
+  "homeTooltipSwitchProfile": "Switch profile",
+  "homeManageProfiles": "Manage profiles…",
+  "homeDialogConfirmDeleteTitle": "Confirm delete",
+  "homeDialogConfirmDeleteContent": "Delete “{name}”?",
+  "@homeDialogConfirmDeleteContent": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "homeSnackStartPostponed": "Start date for “{name}” postponed to {date}.",
+  "@homeSnackStartPostponed": {
+    "placeholders": {
+      "name": {},
+      "date": {}
+    }
+  },
+  "homeSnackSkippedToday": "Skipped {date} for “{name}” (no intake today).",
+  "@homeSnackSkippedToday": {
+    "placeholders": {
+      "name": {},
+      "date": {}
+    }
+  },
+  "homeSnackUpdated": "Updated “{name}”.",
+  "@homeSnackUpdated": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "homeDialogReplenishTitle": "Add stock",
+  "homeFieldAddQuantityLabel": "Quantity to add",
+  "homeFieldAddQuantityHint": "e.g. 180",
+  "validationNumberMin1": "Enter a number ≥ 1",
+  "validationNumberMin0": "Enter a number ≥ 0",
+  "validationUrlInvalid": "Enter a valid URL (http/https)",
+  "errorInvalidBackup": "Invalid or unsupported backup file",
+  "errorUnableToExportImage": "Unable to export image",
+  "homeSnackReplenish": "Added +{quantity} {unit} to “{name}”.",
+  "@homeSnackReplenish": {
+    "placeholders": {
+      "name": {},
+      "quantity": {},
+      "unit": {}
+    }
+  },
+  "statsTotalSupplementsLabel": "Total supplements",
+  "statsTotalSupplementsTrend": "Supplements you’re tracking",
+  "statsTodayCostLabel": "Today’s cost",
+  "statsTodayCostTrend": "Daily average",
+  "statsShortestRemainingLabel": "Shortest remaining",
+  "statsShortestRemainingTrend": "Runs out first",
+  "statsMonthlyCostLabel": "Monthly total",
+  "statsMonthlyCostTrend": "Estimated monthly spending",
+  "emptyTitle": "No supplements yet",
+  "emptySubtitle": "Add your first supplement to start tracking your health investment.",
+  "emptyAddButton": "Add supplement",
+  "reminderSectionTitle": "Reminders",
+  "reminderLowStockTitle": "{name} is running low",
+  "@reminderLowStockTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "reminderLowStockMessage": "Only {days, plural, one{{days} day} other{{days} days}} left. Consider restocking.",
+  "@reminderLowStockMessage": {
+    "placeholders": {
+      "days": {}
+    }
+  },
+  "reminderJustNow": "Just now",
+  "supplementCardSubtitle": "{specification} · Daily {dose} {unit} · Start: {startDate}",
+  "@supplementCardSubtitle": {
+    "placeholders": {
+      "specification": {},
+      "dose": {},
+      "unit": {},
+      "startDate": {}
+    }
+  },
+  "supplementCardRemaining": "{days, plural, one{{days} day left} other{{days} days left}}",
+  "@supplementCardRemaining": {
+    "placeholders": {
+      "days": {}
+    }
+  },
+  "supplementCardMenuTooltip": "Manage",
+  "supplementCardMenuEdit": "Edit",
+  "supplementCardMenuReplenish": "Add stock",
+  "supplementCardMenuSkipToday": "Skip today",
+  "supplementCardMenuDelete": "Delete",
+  "chartMonthlyCostByCategoryTitle": "Monthly cost by category",
+  "chartSpendingTrendTitle": "Spending trend",
+  "exportListTitle": "Export supplement list",
+  "exportListSnackNoSupplements": "No supplements to export.",
+  "exportListSnackShareOpened": "Opened system share sheet (save/send the image).",
+  "exportListSnackPngExported": "PNG exported.",
+  "exportListSnackExportFailed": "Export failed: {error}",
+  "@exportListSnackExportFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "exportListActionSharePng": "Share PNG",
+  "exportListActionDownloadPng": "Download PNG",
+  "exportListCardTitlePng": "Export as image (PNG)",
+  "exportListCardDescriptionMobile": "Use the top-right or button below to share the current profile’s supplement list.",
+  "exportListCardDescriptionDesktop": "Use the top-right or button below to download the current profile’s supplement list image (PNG).",
+  "exportListHeaderTitle": "{profileName}’s Supplement List",
+  "@exportListHeaderTitle": {
+    "placeholders": {
+      "profileName": {}
+    }
+  },
+  "exportListHeaderSubtitle": "A shareable supplement list",
+  "exportListHeaderMeta": "Exported: {date}",
+  "@exportListHeaderMeta": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "exportListInfoChipSupplementsCountLabel": "Count",
+  "exportListInfoChipTodayCostLabel": "Today",
+  "exportListInfoChipMonthlyCostLabel": "Monthly",
+  "exportListHintShare": "Share with friends or a nutritionist for a quick overview.",
+  "exportListItemDailyDosage": "Daily {dose} {unit}",
+  "@exportListItemDailyDosage": {
+    "placeholders": {
+      "dose": {},
+      "unit": {}
+    }
+  },
+  "exportListItemMeta": "Start: {startDate} · Qty: {remaining}/{total}",
+  "@exportListItemMeta": {
+    "placeholders": {
+      "startDate": {},
+      "remaining": {},
+      "total": {}
+    }
+  },
+  "exportListItemRemaining": "{days, plural, one{{days} day left} other{{days} days left}}",
+  "@exportListItemRemaining": {
+    "placeholders": {
+      "days": {}
+    }
+  },
+  "settingsTitle": "Settings",
+  "settingsSectionData": "Data",
+  "settingsBackupCardTitle": "Export / Import",
+  "settingsBackupCardDescription": "Use this for backup and migration. Import will overwrite current data.",
+  "settingsButtonExport": "Export",
+  "settingsButtonImport": "Import",
+  "settingsSnackExported": "Backup exported.",
+  "settingsSnackExportFailed": "Export failed: {error}",
+  "@settingsSnackExportFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "settingsImportConfirmTitle": "Confirm import",
+  "settingsImportConfirmContent": "Import will overwrite all profiles and supplement data. Export a backup first if needed.",
+  "settingsImportContinue": "Continue",
+  "settingsSnackImportDone": "Import completed.",
+  "settingsSnackImportFailed": "Import failed: {error}",
+  "@settingsSnackImportFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "filePickerChooseExportLocation": "Choose export location",
+  "filePickerChooseImportBackup": "Choose a backup file",
+  "shareSubjectSupplementList": "Supplement List",
+  "profileManagerTitle": "Profiles",
+  "profileManagerDescription": "Each profile is independent. You can switch anytime.",
+  "profileManagerTooltipClose": "Close",
+  "profileManagerTooltipRename": "Rename",
+  "profileManagerTooltipDelete": "Delete",
+  "profileManagerButtonClose": "Close",
+  "profileManagerButtonAdd": "Add profile",
+  "profileDialogAddTitle": "Add profile",
+  "profileDialogAddHint": "e.g. Mom / Friend / Partner",
+  "profileDialogAddConfirm": "Add and switch",
+  "profileDialogRenameTitle": "Rename profile",
+  "profileDialogRenameHint": "Enter profile name",
+  "profileDialogRenameConfirm": "Save",
+  "profileDialogDeleteTitle": "Confirm delete",
+  "profileDialogDeleteContent": "Deleting “{name}” will also delete its supplement data.",
+  "@profileDialogDeleteContent": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "supplementEditorTitleAdd": "Add supplement",
+  "supplementEditorTitleEdit": "Edit supplement",
+  "supplementEditorTooltipClose": "Close",
+  "supplementEditorFieldNameLabel": "Supplement name",
+  "supplementEditorFieldNameHint": "e.g. Vitamin D3",
+  "supplementEditorValidationNameRequired": "Please enter a name",
+  "supplementEditorFieldSpecLabel": "Specification",
+  "supplementEditorFieldSpecHint": "e.g. 2000 IU, 180 capsules",
+  "supplementEditorValidationSpecRequired": "Please enter a specification",
+  "supplementEditorFieldDailyDosageLabel": "Daily dosage",
+  "supplementEditorFieldUnitLabel": "Unit",
+  "supplementEditorFieldPriceLabel": "Price (¥)",
+  "supplementEditorFieldPriceHint": "128",
+  "supplementEditorFieldTotalQtyLabel": "Total quantity",
+  "supplementEditorFieldTotalQtyHint": "180",
+  "supplementEditorFieldStartUseDateLabel": "Start date",
+  "supplementEditorDatePickerHelp": "Select start date",
+  "supplementEditorButtonSkipToday": "Skip today",
+  "supplementEditorSkippedDays": "Skipped {count, plural, one{{count} day} other{{count} days}}",
+  "@supplementEditorSkippedDays": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "supplementEditorFieldCategoryLabel": "Category",
+  "supplementEditorFieldPurchaseUrlLabel": "Purchase link (optional)",
+  "supplementEditorFieldPurchaseUrlHint": "https://...",
+  "supplementEditorButtonPickFromExisting": "Pick from existing",
+  "supplementEditorTemplatePickerTitle": "Choose an existing supplement",
+  "supplementEditorTemplatePickerSearchHint": "Search by name or specification",
+  "supplementEditorTemplatePickerEmpty": "No matching supplements"
+}

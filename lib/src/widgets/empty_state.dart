@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../theme/app_theme.dart';
 
 class EmptyState extends StatelessWidget {
@@ -9,6 +10,8 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
@@ -25,13 +28,13 @@ class EmptyState extends StatelessWidget {
                 child: const Icon(Icons.inventory_2_outlined, color: AppTheme.primary, size: 34),
               ),
               const SizedBox(height: 14),
-              const Text(
-                '还没有添加补剂',
+              Text(
+                l10n.emptyTitle,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 6),
-              const Text(
-                '添加您的第一个营养补剂，开始跟踪您的健康投资',
+              Text(
+                l10n.emptySubtitle,
                 style: TextStyle(color: Color(0xFF8A8A8A)),
                 textAlign: TextAlign.center,
               ),
@@ -45,7 +48,7 @@ class EmptyState extends StatelessWidget {
                 ),
                 onPressed: onAdd,
                 icon: const Icon(Icons.add),
-                label: const Text('添加补剂'),
+                label: Text(l10n.emptyAddButton),
               ),
             ],
           ),

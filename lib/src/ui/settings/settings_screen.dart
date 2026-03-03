@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../controllers/supplements_controller.dart';
+import '../../l10n/l10n.dart';
 import '../../services/backup/backup_file_service_factory.dart';
 import '../../theme/app_theme.dart';
 
@@ -33,20 +34,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (_busy) return;
     setState(() => _busy = true);
 
+    final l10n = context.l10n;
     try {
       final json = await widget.controller.exportBackupJson();
       final ok = await _fileService.saveJson(
+        dialogTitle: l10n.filePickerChooseExportLocation,
         suggestedFileName: _buildSuggestedFileName(),
         json: json,
       );
 
       if (!mounted) return;
       if (ok) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已导出备份文件')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.settingsSnackExported)));
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导出失败：$e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.settingsSnackExportFailed(e.toString()))),
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -56,22 +61,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (_busy) return;
     setState(() => _busy = true);
 
+    final l10n = context.l10n;
     try {
-      final json = await _fileService.pickJson();
+      final json = await _fileService.pickJson(dialogTitle: l10n.filePickerChooseImportBackup);
       if (json == null) return;
       if (!mounted) return;
 
       final ok = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('确认导入'),
-          content: const Text('导入将覆盖当前所有成员与补剂数据。建议先导出备份再继续。'),
+          title: Text(l10n.settingsImportConfirmTitle),
+          content: Text(l10n.settingsImportConfirmContent),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(l10n.commonCancel),
+            ),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: AppTheme.primary),
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('继续导入'),
+              child: Text(l10n.settingsImportContinue),
             ),
           ],
         ),
@@ -82,10 +91,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await widget.controller.importBackupJson(json);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('导入完成')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.settingsSnackImportDone)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导入失败：$e')));
+      final error = e is FormatException ? l10n.errorInvalidBackup : e.toString();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.settingsSnackImportFailed(error))),
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -93,14 +105,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('设置'),
+        title: Text(l10n.settingsTitle),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
-          const _SectionTitle('数据'),
+          _SectionTitle(l10n.settingsSectionData),
           const SizedBox(height: 10),
           Card(
             child: Padding(
@@ -108,13 +121,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '数据导出 / 导入',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  Text(
+                    l10n.settingsBackupCardTitle,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '用于备份与换机迁移。导入会覆盖当前数据。',
+                    l10n.settingsBackupCardDescription,
                     style: TextStyle(color: Colors.black.withValues(alpha: 0.60)),
                   ),
                   const SizedBox(height: 12),
@@ -124,7 +137,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: FilledButton.icon(
                           onPressed: _busy ? null : _export,
                           icon: const Icon(Icons.upload_file),
-                          label: const Text('导出'),
+                          label: Text(l10n.settingsButtonExport),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -132,7 +145,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: OutlinedButton.icon(
                           onPressed: _busy ? null : _import,
                           icon: const Icon(Icons.download),
-                          label: const Text('导入'),
+                          label: Text(l10n.settingsButtonImport),
                         ),
                       ),
                     ],

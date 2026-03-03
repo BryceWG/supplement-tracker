@@ -10,6 +10,8 @@ import 'image_file_service.dart';
 class _ImageFileServiceIo implements ImageFileService {
   @override
   Future<bool> savePng({
+    required String dialogTitle,
+    required String shareSubject,
     required String suggestedFileName,
     required Uint8List pngBytes,
   }) async {
@@ -27,14 +29,14 @@ class _ImageFileServiceIo implements ImageFileService {
       await SharePlus.instance.share(
         ShareParams(
           files: [XFile(file.path, mimeType: 'image/png', name: fileName)],
-          subject: '补剂清单',
+          subject: shareSubject,
         ),
       );
       return true;
     }
 
     final outputPath = await FilePicker.platform.saveFile(
-      dialogTitle: '选择导出位置',
+      dialogTitle: dialogTitle,
       fileName: fileName,
       type: FileType.custom,
       allowedExtensions: const ['png'],

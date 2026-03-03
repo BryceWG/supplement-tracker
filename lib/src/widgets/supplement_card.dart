@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../models/supplement.dart';
 import '../util/colors.dart';
 import '../util/format.dart';
@@ -30,11 +31,21 @@ class SupplementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final remainingDays = supplement.remainingDays;
     final progress = supplement.remainingPercent.clamp(0.0, 1.0);
     final estimatedRemainingQty = supplement.estimatedRemainingQuantity;
     final stripColor = CategoryColors.fromHex(supplement.colorHex);
     final progressColor = _progressColor(remainingDays);
+
+    final unit = dosageUnitLabel(context, supplement.dosageUnit, count: supplement.dailyDosage);
+    final startDate = supplement.startUseDate ?? l10n.commonNotSet;
+    final subtitle = l10n.supplementCardSubtitle(
+      supplement.specification,
+      supplement.dailyDosage,
+      unit,
+      startDate,
+    );
 
     return Card(
       child: Padding(
@@ -61,26 +72,20 @@ class SupplementCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${supplement.specification} · 每日${supplement.dailyDosage}${supplement.dosageUnit}'
-                    ' · 开始：${supplement.startUseDate ?? '未设置'}',
-                    style:
-                        const TextStyle(color: Color(0xFF8A8A8A), fontSize: 12),
+                    subtitle,
+                    style: const TextStyle(color: Color(0xFF8A8A8A), fontSize: 12),
                   ),
                   const SizedBox(height: 10),
                   Row(
                     children: [
                       Text(
-                        '剩余 $remainingDays 天',
-                        style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF5A5A5A)),
+                        l10n.supplementCardRemaining(remainingDays),
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF5A5A5A)),
                       ),
                       const Spacer(),
                       Text(
                         '$estimatedRemainingQty/${supplement.totalQuantity}',
-                        style: const TextStyle(
-                            fontSize: 12, color: Color(0xFF8A8A8A)),
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
                       ),
                     ],
                   ),
@@ -102,15 +107,16 @@ class SupplementCard extends StatelessWidget {
               children: [
                 Text(
                   Format.currencyCny(supplement.dailyCost),
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w700),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 2),
-                const Text('每日',
-                    style: TextStyle(fontSize: 11, color: Color(0xFF8A8A8A))),
+                Text(
+                  l10n.commonPerDay,
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF8A8A8A)),
+                ),
                 const SizedBox(height: 8),
                 PopupMenuButton<_SupplementCardAction>(
-                  tooltip: '管理',
+                  tooltip: l10n.supplementCardMenuTooltip,
                   position: PopupMenuPosition.under,
                   onSelected: (action) {
                     switch (action) {
@@ -128,14 +134,14 @@ class SupplementCard extends StatelessWidget {
                         break;
                     }
                   },
-                  itemBuilder: (context) => const [
+                  itemBuilder: (context) => [
                     PopupMenuItem<_SupplementCardAction>(
                       value: _SupplementCardAction.edit,
                       child: Row(
                         children: [
-                          Icon(Icons.edit_outlined, size: 18),
-                          SizedBox(width: 10),
-                          Text('编辑'),
+                          const Icon(Icons.edit_outlined, size: 18),
+                          const SizedBox(width: 10),
+                          Text(l10n.supplementCardMenuEdit),
                         ],
                       ),
                     ),
@@ -143,9 +149,9 @@ class SupplementCard extends StatelessWidget {
                       value: _SupplementCardAction.replenish,
                       child: Row(
                         children: [
-                          Icon(Icons.add_circle_outline, size: 18),
-                          SizedBox(width: 10),
-                          Text('补充总量'),
+                          const Icon(Icons.add_circle_outline, size: 18),
+                          const SizedBox(width: 10),
+                          Text(l10n.supplementCardMenuReplenish),
                         ],
                       ),
                     ),
@@ -153,22 +159,23 @@ class SupplementCard extends StatelessWidget {
                       value: _SupplementCardAction.postponeOneDay,
                       child: Row(
                         children: [
-                          Icon(Icons.snooze_outlined, size: 18),
-                          SizedBox(width: 10),
-                          Text('跳过今天'),
+                          const Icon(Icons.snooze_outlined, size: 18),
+                          const SizedBox(width: 10),
+                          Text(l10n.supplementCardMenuSkipToday),
                         ],
                       ),
                     ),
-                    PopupMenuDivider(),
+                    const PopupMenuDivider(),
                     PopupMenuItem<_SupplementCardAction>(
                       value: _SupplementCardAction.delete,
                       child: Row(
                         children: [
-                          Icon(Icons.delete_outline,
-                              size: 18, color: Color(0xFFEF4444)),
-                          SizedBox(width: 10),
-                          Text('删除',
-                              style: TextStyle(color: Color(0xFFEF4444))),
+                          const Icon(Icons.delete_outline, size: 18, color: Color(0xFFEF4444)),
+                          const SizedBox(width: 10),
+                          Text(
+                            l10n.supplementCardMenuDelete,
+                            style: const TextStyle(color: Color(0xFFEF4444)),
+                          ),
                         ],
                       ),
                     ),

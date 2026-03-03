@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../../models/supplement.dart';
 import '../../util/colors.dart';
 import '../../util/format.dart';
@@ -34,7 +35,7 @@ class CategoryPieChart extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('月度花费分布', style: TextStyle(fontWeight: FontWeight.w700)),
+            Text(context.l10n.chartMonthlyCostByCategoryTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 10),
             SizedBox(
               height: 200,
@@ -65,7 +66,7 @@ class CategoryPieChart extends StatelessWidget {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                e.key,
+                                categoryLabel(context, e.key),
                                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                                 overflow: TextOverflow.ellipsis,
                               ),

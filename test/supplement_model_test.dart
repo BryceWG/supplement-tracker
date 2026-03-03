@@ -97,7 +97,7 @@ void main() {
   test('Controller postponeStartUseOneDay skips today', () async {
     SharedPreferences.setMockInitialValues({});
 
-    final controller = SupplementsController(store: SupplementsStore());
+    final controller = SupplementsController(store: SupplementsStore(), defaultProfileName: 'Me');
     await controller.init();
 
     const id = 'postpone-test';
@@ -128,7 +128,7 @@ void main() {
   test('Controller replenishQuantity increases totals', () async {
     SharedPreferences.setMockInitialValues({});
 
-    final controller = SupplementsController(store: SupplementsStore());
+    final controller = SupplementsController(store: SupplementsStore(), defaultProfileName: 'Me');
     await controller.init();
 
     const id = 'replenish-test';
@@ -185,7 +185,7 @@ void main() {
   test('Controller daily/monthly totals follow per-day consumption', () async {
     SharedPreferences.setMockInitialValues({});
 
-    final controller = SupplementsController(store: SupplementsStore());
+    final controller = SupplementsController(store: SupplementsStore(), defaultProfileName: 'Me');
     await controller.init();
 
     await controller.upsert(

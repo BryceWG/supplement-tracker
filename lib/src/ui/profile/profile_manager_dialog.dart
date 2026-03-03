@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../controllers/supplements_controller.dart';
+import '../../l10n/l10n.dart';
 import '../../theme/app_theme.dart';
 
 class ProfileManagerDialog extends StatelessWidget {
@@ -10,6 +11,7 @@ class ProfileManagerDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
@@ -28,21 +30,21 @@ class ProfileManagerDialog extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Text('成员管理', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                      Text(l10n.profileManagerTitle, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                       const Spacer(),
                       IconButton(
-                        tooltip: '关闭',
+                        tooltip: l10n.profileManagerTooltipClose,
                         onPressed: () => Navigator.of(context).pop(),
                         icon: const Icon(Icons.close),
                       ),
                     ],
                   ),
                   const SizedBox(height: 6),
-                  const Align(
+                  Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      '每个成员的数据相互独立，可随时切换。',
-                      style: TextStyle(color: Color(0xFF8A8A8A), fontSize: 12),
+                      l10n.profileManagerDescription,
+                      style: const TextStyle(color: Color(0xFF8A8A8A), fontSize: 12),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -83,12 +85,12 @@ class ProfileManagerDialog extends StatelessWidget {
                                     ),
                                   ),
                                   IconButton(
-                                    tooltip: '重命名',
+                                    tooltip: l10n.profileManagerTooltipRename,
                                     onPressed: () => _renameProfile(context, controller, p.id, p.name),
                                     icon: const Icon(Icons.edit_outlined, size: 20),
                                   ),
                                   IconButton(
-                                    tooltip: '删除',
+                                    tooltip: l10n.profileManagerTooltipDelete,
                                     onPressed: profiles.length <= 1
                                         ? null
                                         : () => _confirmDelete(context, controller, p.id, p.name),
@@ -111,7 +113,7 @@ class ProfileManagerDialog extends StatelessWidget {
                     children: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('关闭'),
+                        child: Text(l10n.profileManagerButtonClose),
                       ),
                       const Spacer(),
                       FilledButton.icon(
@@ -121,7 +123,7 @@ class ProfileManagerDialog extends StatelessWidget {
                         ),
                         onPressed: () => _addProfile(context, controller),
                         icon: const Icon(Icons.person_add_alt_1_outlined),
-                        label: const Text('添加成员'),
+                        label: Text(l10n.profileManagerButtonAdd),
                       ),
                     ],
                   ),
@@ -135,12 +137,13 @@ class ProfileManagerDialog extends StatelessWidget {
   }
 
   static Future<void> _addProfile(BuildContext context, SupplementsController controller) async {
+    final l10n = context.l10n;
     final name = await _askName(
       context,
-      title: '添加成员',
+      title: l10n.profileDialogAddTitle,
       initialValue: '',
-      hintText: '例如：妈妈 / 朋友 / 伴侣',
-      confirmText: '添加并切换',
+      hintText: l10n.profileDialogAddHint,
+      confirmText: l10n.profileDialogAddConfirm,
     );
     if (name == null) return;
     await controller.addProfile(name);
@@ -153,12 +156,13 @@ class ProfileManagerDialog extends StatelessWidget {
     String profileId,
     String currentName,
   ) async {
+    final l10n = context.l10n;
     final name = await _askName(
       context,
-      title: '重命名成员',
+      title: l10n.profileDialogRenameTitle,
       initialValue: currentName,
-      hintText: '请输入成员名称',
-      confirmText: '保存',
+      hintText: l10n.profileDialogRenameHint,
+      confirmText: l10n.profileDialogRenameConfirm,
     );
     if (name == null) return;
     await controller.renameProfile(profileId, name);
@@ -170,17 +174,18 @@ class ProfileManagerDialog extends StatelessWidget {
     String profileId,
     String name,
   ) async {
+    final l10n = context.l10n;
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('确认删除'),
-        content: Text('删除「$name」后，该成员的补剂数据也会一并删除。'),
+        title: Text(l10n.profileDialogDeleteTitle),
+        content: Text(l10n.profileDialogDeleteContent(name)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.commonCancel)),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('删除'),
+            child: Text(l10n.commonDelete),
           ),
         ],
       ),
@@ -211,7 +216,7 @@ class ProfileManagerDialog extends StatelessWidget {
           onSubmitted: (_) => Navigator.pop(context, controller.text.trim()),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(context.l10n.commonCancel)),
           FilledButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
             child: Text(confirmText),
@@ -227,4 +232,3 @@ class ProfileManagerDialog extends StatelessWidget {
     return trimmed;
   }
 }
-

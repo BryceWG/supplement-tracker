@@ -1,7 +1,9 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' as intl;
 
+import '../../l10n/l10n.dart';
 import '../../models/supplement.dart';
 import '../../theme/app_theme.dart';
 
@@ -10,12 +12,14 @@ class MonthlyTrendChart extends StatelessWidget {
 
   final List<Supplement> supplements;
 
-  List<String> _last6MonthsLabels() {
+  List<String> _last6MonthsLabels(BuildContext context) {
+    final l10n = context.l10n;
     final now = DateTime.now();
     final labels = <String>[];
+    final fmt = intl.DateFormat.MMM(l10n.localeName);
     for (var i = 5; i >= 0; i--) {
       final d = DateTime(now.year, now.month - i, 1);
-      labels.add('${d.month}月');
+      labels.add(fmt.format(d));
     }
     return labels;
   }
@@ -26,7 +30,7 @@ class MonthlyTrendChart extends StatelessWidget {
 
     final from = DateTime.now();
     final monthlyTotal = supplements.fold<double>(0, (sum, s) => sum + s.costForNextDays(from: from, days: 30));
-    final labels = _last6MonthsLabels();
+    final labels = _last6MonthsLabels(context);
     final values = List<double>.filled(6, monthlyTotal);
 
     return Card(
@@ -35,7 +39,7 @@ class MonthlyTrendChart extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('花费趋势', style: TextStyle(fontWeight: FontWeight.w700)),
+            Text(context.l10n.chartSpendingTrendTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 10),
             SizedBox(
               height: 200,
