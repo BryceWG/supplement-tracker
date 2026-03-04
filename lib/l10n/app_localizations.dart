@@ -913,13 +913,19 @@ abstract class AppLocalizations {
   /// No description provided for @supplementEditorButtonPickFromExisting.
   ///
   /// In en, this message translates to:
-  /// **'Pick from existing'**
+  /// **'Share existing stock'**
   String get supplementEditorButtonPickFromExisting;
+
+  /// No description provided for @supplementEditorSharedStockHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You will share the same stock as {profileName} (consumption is combined).'**
+  String supplementEditorSharedStockHint(Object profileName);
 
   /// No description provided for @supplementEditorTemplatePickerTitle.
   ///
   /// In en, this message translates to:
-  /// **'Choose an existing supplement'**
+  /// **'Choose a supplement to share stock'**
   String get supplementEditorTemplatePickerTitle;
 
   /// No description provided for @supplementEditorTemplatePickerSearchHint.

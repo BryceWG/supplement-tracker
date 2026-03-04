@@ -37,6 +37,40 @@ class DosageChange {
   }
 }
 
+class StockChange {
+  const StockChange({
+    required this.effectiveDate,
+    required this.quantityDelta,
+  });
+
+  /// yyyy-MM-dd
+  final String effectiveDate;
+
+  /// Positive means replenish; negative means adjust down (e.g. correction/loss).
+  final int quantityDelta;
+
+  Map<String, Object?> toJson() => {
+        'effectiveDate': effectiveDate,
+        'quantityDelta': quantityDelta,
+      };
+
+  static StockChange? tryFromJson(Object? raw) {
+    if (raw is! Map) return null;
+    final date = raw['effectiveDate'];
+    final qty = raw['quantityDelta'];
+    if (date is! String) return null;
+    if (qty is! num) return null;
+
+    final parsed = DateTime.tryParse(date);
+    if (parsed == null) return null;
+    final normalized = Supplement.formatYmd(Supplement.startOfDay(parsed));
+
+    final delta = qty.toInt();
+    if (delta == 0) return null;
+    return StockChange(effectiveDate: normalized, quantityDelta: delta);
+  }
+}
+
 class Supplement {
   Supplement({
     required this.id,
@@ -48,14 +82,18 @@ class Supplement {
     required this.purchaseDate,
     this.startUseDate,
     this.purchaseUrl,
+    this.stockId,
     required this.totalQuantity,
     required this.remainingQuantity,
     required this.category,
     required this.colorHex,
     List<String>? skippedDates,
     List<DosageChange>? dosageChanges,
+    List<StockChange>? stockChanges,
   })  : skippedDates = List.unmodifiable(skippedDates ?? const []),
         dosageChanges = List.unmodifiable((dosageChanges ?? const []).toList()
+          ..sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate))),
+        stockChanges = List.unmodifiable((stockChanges ?? const []).toList()
           ..sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate)));
 
   final String id;
@@ -67,14 +105,22 @@ class Supplement {
   final String purchaseDate; // yyyy-MM-dd
   final String? startUseDate; // yyyy-MM-dd
   final String? purchaseUrl;
+  final String? stockId;
   final int totalQuantity;
   final int remainingQuantity;
   final String category;
   final String colorHex;
   final List<String> skippedDates;
   final List<DosageChange> dosageChanges;
+  final List<StockChange> stockChanges;
 
   String get effectiveStartUseDateYmd => startUseDate ?? purchaseDate;
+
+  String startUseDateYmdForCalc(DateTime today) {
+    // Legacy data might not have `startUseDate`. In that case, treat it as "not started yet",
+    // so remaining days won't suddenly drop just because `purchaseDate` is old.
+    return startUseDate ?? formatYmd(today);
+  }
 
   static DateTime parseYmd(String ymd) => DateTime.parse(ymd);
 
@@ -95,12 +141,14 @@ class Supplement {
     String? purchaseDate,
     Object? startUseDate = _noChange,
     Object? purchaseUrl = _noChange,
+    Object? stockId = _noChange,
     int? totalQuantity,
     int? remainingQuantity,
     String? category,
     String? colorHex,
     Object? skippedDates = _noChange,
     Object? dosageChanges = _noChange,
+    Object? stockChanges = _noChange,
   }) {
     return Supplement(
       id: id ?? this.id,
@@ -112,19 +160,39 @@ class Supplement {
       purchaseDate: purchaseDate ?? this.purchaseDate,
       startUseDate: identical(startUseDate, _noChange) ? this.startUseDate : startUseDate as String?,
       purchaseUrl: identical(purchaseUrl, _noChange) ? this.purchaseUrl : purchaseUrl as String?,
+      stockId: identical(stockId, _noChange) ? this.stockId : stockId as String?,
       totalQuantity: totalQuantity ?? this.totalQuantity,
       remainingQuantity: remainingQuantity ?? this.remainingQuantity,
       category: category ?? this.category,
       colorHex: colorHex ?? this.colorHex,
       skippedDates: identical(skippedDates, _noChange) ? this.skippedDates : skippedDates as List<String>?,
       dosageChanges: identical(dosageChanges, _noChange) ? this.dosageChanges : dosageChanges as List<DosageChange>?,
+      stockChanges: identical(stockChanges, _noChange) ? this.stockChanges : stockChanges as List<StockChange>?,
     );
   }
 
+  int totalQuantityAt(DateTime day) {
+    if (stockChanges.isEmpty) return totalQuantity;
+    final ymd = formatYmd(startOfDay(day));
+    var total = totalQuantity;
+    for (final c in stockChanges) {
+      if (c.effectiveDate.compareTo(ymd) <= 0) {
+        total += c.quantityDelta;
+      } else {
+        break;
+      }
+    }
+    return total < 0 ? 0 : total;
+  }
+
+  double get unitCost {
+    if (totalQuantity <= 0) return 0;
+    if (price <= 0) return 0;
+    return price / totalQuantity;
+  }
+
   double get dailyCost {
-    final daysSupply = totalQuantity / dailyDosage;
-    if (daysSupply <= 0) return 0;
-    return price / daysSupply;
+    return unitCost * dailyDosageOn(DateTime.now());
   }
 
   static DateTime startOfDay(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
@@ -141,7 +209,7 @@ class Supplement {
   }
 
   bool hasStartedBy(DateTime day) {
-    final start = DateTime.tryParse(startUseDate ?? '');
+    final start = DateTime.tryParse(startUseDateYmdForCalc(day));
     if (start == null) return false;
     return !startOfDay(day).isBefore(startOfDay(start));
   }
@@ -162,30 +230,55 @@ class Supplement {
   }
 
   int estimatedRemainingQuantityBeforeConsumptionAt(DateTime day) {
-    if (totalQuantity <= 0) return 0;
-
-    final start = DateTime.tryParse(startUseDate ?? '');
-    if (start == null) return totalQuantity;
+    final start = DateTime.tryParse(startUseDateYmdForCalc(day));
+    if (start == null) return totalQuantityAt(day);
 
     final startDay = startOfDay(start);
     final dayDay = startOfDay(day);
-    if (dayDay.isBefore(startDay)) return totalQuantity;
+    if (dayDay.isBefore(startDay)) return totalQuantityAt(day);
 
     final skipped = skippedDates.isEmpty ? const <String>{} : skippedDates.toSet();
 
+    final stockDeltaByDate = <String, int>{};
+    for (final c in stockChanges) {
+      stockDeltaByDate[c.effectiveDate] = (stockDeltaByDate[c.effectiveDate] ?? 0) + c.quantityDelta;
+    }
+
+    final startYmd = formatYmd(startDay);
     var remaining = totalQuantity;
+    for (final c in stockChanges) {
+      if (c.effectiveDate.compareTo(startYmd) < 0) {
+        remaining += c.quantityDelta;
+      } else {
+        break;
+      }
+    }
+    if (remaining < 0) remaining = 0;
+
     var cursor = startDay;
     final endDay = addDays(dayDay, -1);
     while (!cursor.isAfter(endDay)) {
       if (remaining <= 0) break;
-      final ymd = formatYmd(cursor);
-      if (!skipped.contains(ymd)) {
+      final cursorYmd = formatYmd(cursor);
+      final delta = stockDeltaByDate[cursorYmd];
+      if (delta != null) {
+        remaining += delta;
+        if (remaining < 0) remaining = 0;
+      }
+      if (!skipped.contains(cursorYmd)) {
         final dose = dailyDosageOn(cursor);
         if (dose > 0 && remaining >= dose) {
           remaining -= dose;
         }
       }
       cursor = addDays(cursor, 1);
+    }
+
+    final dayYmd = formatYmd(dayDay);
+    final dayDelta = stockDeltaByDate[dayYmd];
+    if (dayDelta != null) {
+      remaining += dayDelta;
+      if (remaining < 0) remaining = 0;
     }
 
     return remaining;
@@ -209,7 +302,7 @@ class Supplement {
     final remainingBefore = estimatedRemainingQuantityBeforeConsumptionAt(day);
     if (remainingBefore < dose) return 0;
 
-    return (price / totalQuantity) * dose;
+    return unitCost * dose;
   }
 
   double costForNextDays({required DateTime from, required int days}) {
@@ -220,19 +313,30 @@ class Supplement {
     if (remaining <= 0) return 0;
 
     final skipped = skippedDates.isEmpty ? const <String>{} : skippedDates.toSet();
+    final stockDeltaByDate = <String, int>{};
+    for (final c in stockChanges) {
+      stockDeltaByDate[c.effectiveDate] = (stockDeltaByDate[c.effectiveDate] ?? 0) + c.quantityDelta;
+    }
     var total = 0.0;
     for (var i = 0; i < days; i++) {
       final day = addDays(start, i);
       if (!hasStartedBy(day)) continue;
 
       final ymd = formatYmd(day);
+      if (i > 0) {
+        final delta = stockDeltaByDate[ymd];
+        if (delta != null) {
+          remaining += delta;
+          if (remaining < 0) remaining = 0;
+        }
+      }
       if (skipped.contains(ymd)) continue;
 
       final dose = dailyDosageOn(day);
       if (dose <= 0) continue;
       if (remaining < dose) continue;
 
-      total += (price / totalQuantity) * dose;
+      total += unitCost * dose;
       remaining -= dose;
       if (remaining <= 0) break;
     }
@@ -258,8 +362,9 @@ class Supplement {
   }
 
   double remainingPercentAt(DateTime today) {
-    if (totalQuantity <= 0) return 0;
-    return estimatedRemainingQuantityAt(today) / totalQuantity;
+    final denom = totalQuantityAt(today);
+    if (denom <= 0) return 0;
+    return estimatedRemainingQuantityAt(today) / denom;
   }
 
   int get estimatedRemainingQuantity => estimatedRemainingQuantityAt(DateTime.now());
@@ -282,12 +387,14 @@ class Supplement {
         'purchaseDate': purchaseDate,
         if (startUseDate != null) 'startUseDate': startUseDate,
         if (purchaseUrl != null) 'purchaseUrl': purchaseUrl,
+        if (stockId != null) 'stockId': stockId,
         'totalQuantity': totalQuantity,
         'remainingQuantity': remainingQuantity,
         'category': category,
         'color': colorHex,
         if (skippedDates.isNotEmpty) 'skippedDates': skippedDates,
         if (dosageChanges.isNotEmpty) 'dosageChanges': dosageChanges.map((c) => c.toJson()).toList(),
+        if (stockChanges.isNotEmpty) 'stockChanges': stockChanges.map((c) => c.toJson()).toList(),
       };
 
   static Supplement fromJson(Map<String, Object?> json) {
@@ -298,6 +405,12 @@ class Supplement {
         ? rawChanges.map(DosageChange.tryFromJson).whereType<DosageChange>().toList()
         : <DosageChange>[];
     changes.sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate));
+
+    final rawStock = json['stockChanges'];
+    final stock = rawStock is List
+        ? rawStock.map(StockChange.tryFromJson).whereType<StockChange>().toList()
+        : <StockChange>[];
+    stock.sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate));
     return Supplement(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -308,12 +421,14 @@ class Supplement {
       purchaseDate: json['purchaseDate'] as String,
       startUseDate: json['startUseDate'] as String?,
       purchaseUrl: json['purchaseUrl'] as String?,
+      stockId: json['stockId'] as String?,
       totalQuantity: (json['totalQuantity'] as num).toInt(),
       remainingQuantity: (json['remainingQuantity'] as num).toInt(),
       category: category,
       colorHex: (json['color'] as String?) ?? CategoryColors.hexForCategory(category),
       skippedDates: skipped,
       dosageChanges: changes,
+      stockChanges: stock,
     );
   }
 

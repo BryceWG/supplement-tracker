@@ -134,8 +134,9 @@
   "supplementEditorFieldCategoryLabel": "分类",
   "supplementEditorFieldPurchaseUrlLabel": "购买链接（可选）",
   "supplementEditorFieldPurchaseUrlHint": "https://...",
-  "supplementEditorButtonPickFromExisting": "从已有补剂复制",
-  "supplementEditorTemplatePickerTitle": "选择已有补剂",
+  "supplementEditorButtonPickFromExisting": "从已有补剂共享库存",
+  "supplementEditorSharedStockHint": "将与「{profileName}」的该补剂共享同一份库存（消耗会合并计算）。",
+  "supplementEditorTemplatePickerTitle": "选择要共享库存的补剂",
   "supplementEditorTemplatePickerSearchHint": "搜索补剂名称/规格",
   "supplementEditorTemplatePickerEmpty": "没有找到匹配的补剂"
 }

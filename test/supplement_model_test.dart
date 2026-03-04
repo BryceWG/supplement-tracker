@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:supplement_tracker/src/controllers/supplements_controller.dart';
 import 'package:supplement_tracker/src/models/supplement.dart';
+import 'package:supplement_tracker/src/models/supplement_stock.dart';
 import 'package:supplement_tracker/src/services/supplements_store.dart';
 
 void main() {
@@ -182,10 +183,14 @@ void main() {
       ),
     );
 
-    final updated = await controller.replenishQuantity(id, addQuantity: 5);
+    final updated = await controller.replenishQuantity(
+      id,
+      addQuantity: 5,
+      today: DateTime(2026, 3, 2),
+    );
     expect(updated, isNotNull);
-    expect(updated!.totalQuantity, 15);
-    expect(updated.remainingQuantity, 15);
+    expect(updated!.stockChanges, isNotEmpty);
+    expect(updated.totalQuantityAt(DateTime(2026, 3, 2)), 15);
   });
 
   test('Daily cost on a date respects start/skip/stock', () {
@@ -277,6 +282,180 @@ void main() {
 
     expect(controller.dailyCostTotalAt(today), 1);
     expect(controller.monthlyCostTotalFrom(today, days: 3), 13);
+  });
+
+  test('Shared stock aggregates depletion across usages', () {
+    const stockId = 'stock-1';
+    final stock = SupplementStock(
+      id: stockId,
+      name: 'D3',
+      specification: '2000IU',
+      dosageUnit: '粒',
+      price: 30,
+      purchaseDate: '2026-03-01',
+      totalQuantity: 30,
+      category: '维生素',
+      colorHex: '#000000',
+    );
+
+    final u1 = Supplement(
+      id: 'u1',
+      name: 'D3',
+      specification: '2000IU',
+      dailyDosage: 2,
+      dosageUnit: '粒',
+      price: 30,
+      purchaseDate: '2026-03-01',
+      startUseDate: '2026-03-01',
+      stockId: stockId,
+      totalQuantity: 30,
+      remainingQuantity: 30,
+      category: '维生素',
+      colorHex: '#000000',
+    );
+
+    final u2 = Supplement(
+      id: 'u2',
+      name: 'D3',
+      specification: '2000IU',
+      dailyDosage: 1,
+      dosageUnit: '粒',
+      price: 30,
+      purchaseDate: '2026-03-01',
+      startUseDate: '2026-03-01',
+      stockId: stockId,
+      totalQuantity: 30,
+      remainingQuantity: 30,
+      category: '维生素',
+      colorHex: '#000000',
+    );
+
+    final stats = SharedStockStats.compute(
+      stock: stock,
+      usages: [u1, u2],
+      today: DateTime(2026, 3, 1),
+    );
+
+    expect(stats.totalQuantity, 30);
+    expect(stats.remainingQuantity, 27);
+    expect(stats.remainingDays, 9);
+    expect(stats.remainingPercent, closeTo(0.9, 1e-12));
+  });
+
+  test('Shared stock respects skip days', () {
+    const stockId = 'stock-2';
+    final stock = SupplementStock(
+      id: stockId,
+      name: 'D3',
+      specification: '2000IU',
+      dosageUnit: '粒',
+      price: 30,
+      purchaseDate: '2026-03-01',
+      totalQuantity: 30,
+      category: '维生素',
+      colorHex: '#000000',
+    );
+
+    final u1 = Supplement(
+      id: 'u1',
+      name: 'D3',
+      specification: '2000IU',
+      dailyDosage: 2,
+      dosageUnit: '粒',
+      price: 30,
+      purchaseDate: '2026-03-01',
+      startUseDate: '2026-03-01',
+      stockId: stockId,
+      totalQuantity: 30,
+      remainingQuantity: 30,
+      category: '维生素',
+      colorHex: '#000000',
+    );
+
+    final u2 = Supplement(
+      id: 'u2',
+      name: 'D3',
+      specification: '2000IU',
+      dailyDosage: 1,
+      dosageUnit: '粒',
+      price: 30,
+      purchaseDate: '2026-03-01',
+      startUseDate: '2026-03-01',
+      stockId: stockId,
+      totalQuantity: 30,
+      remainingQuantity: 30,
+      category: '维生素',
+      colorHex: '#000000',
+      skippedDates: const ['2026-03-02'],
+    );
+
+    final stats = SharedStockStats.compute(
+      stock: stock,
+      usages: [u1, u2],
+      today: DateTime(2026, 3, 3),
+    );
+
+    expect(stats.remainingQuantity, 22);
+    expect(stats.remainingDays, 7);
+  });
+
+  test('Shared stock does not retroactively apply dosage changes', () {
+    const stockId = 'stock-3';
+    final stock = SupplementStock(
+      id: stockId,
+      name: 'D3',
+      specification: '2000IU',
+      dosageUnit: '粒',
+      price: 100,
+      purchaseDate: '2026-03-01',
+      totalQuantity: 100,
+      category: '维生素',
+      colorHex: '#000000',
+    );
+
+    final u1 = Supplement(
+      id: 'u1',
+      name: 'D3',
+      specification: '2000IU',
+      dailyDosage: 3, // current dosage
+      dosageUnit: '粒',
+      price: 100,
+      purchaseDate: '2026-03-01',
+      startUseDate: '2026-03-01',
+      stockId: stockId,
+      totalQuantity: 100,
+      remainingQuantity: 100,
+      category: '维生素',
+      colorHex: '#000000',
+      dosageChanges: const [
+        DosageChange(effectiveDate: '2026-03-01', dailyDosage: 2),
+        DosageChange(effectiveDate: '2026-03-11', dailyDosage: 3),
+      ],
+    );
+
+    final u2 = Supplement(
+      id: 'u2',
+      name: 'D3',
+      specification: '2000IU',
+      dailyDosage: 1,
+      dosageUnit: '粒',
+      price: 100,
+      purchaseDate: '2026-03-01',
+      startUseDate: '2026-03-01',
+      stockId: stockId,
+      totalQuantity: 100,
+      remainingQuantity: 100,
+      category: '维生素',
+      colorHex: '#000000',
+    );
+
+    final stats = SharedStockStats.compute(
+      stock: stock,
+      usages: [u1, u2],
+      today: DateTime(2026, 3, 11),
+    );
+
+    expect(stats.remainingQuantity, 66);
   });
 }
 

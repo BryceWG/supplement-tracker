@@ -527,13 +527,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supplementEditorFieldPurchaseUrlHint => 'https://...';
 
   @override
-  String get supplementEditorButtonPickFromExisting => 'Pick from existing';
+  String get supplementEditorButtonPickFromExisting => 'Share existing stock';
 
   @override
-  String get supplementEditorTemplatePickerTitle => 'Choose an existing supplement';
+  String supplementEditorSharedStockHint(Object profileName) {
+    return 'You will share the same stock as $profileName (consumption is combined).';
+  }
 
   @override
-  String get supplementEditorTemplatePickerSearchHint => 'Search by name or specification';
+  String get supplementEditorTemplatePickerTitle =>
+      'Choose a supplement to share stock';
+
+  @override
+  String get supplementEditorTemplatePickerSearchHint =>
+      'Search by name or specification';
 
   @override
   String get supplementEditorTemplatePickerEmpty => 'No matching supplements';

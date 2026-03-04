@@ -519,10 +519,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supplementEditorFieldPurchaseUrlHint => 'https://...';
 
   @override
-  String get supplementEditorButtonPickFromExisting => '从已有补剂复制';
+  String get supplementEditorButtonPickFromExisting => '从已有补剂共享库存';
 
   @override
-  String get supplementEditorTemplatePickerTitle => '选择已有补剂';
+  String supplementEditorSharedStockHint(Object profileName) {
+    return '将与「$profileName」的该补剂共享同一份库存（消耗会合并计算）。';
+  }
+
+  @override
+  String get supplementEditorTemplatePickerTitle => '选择要共享库存的补剂';
 
   @override
   String get supplementEditorTemplatePickerSearchHint => '搜索补剂名称/规格';
@@ -1046,10 +1051,15 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get supplementEditorFieldPurchaseUrlHint => 'https://...';
 
   @override
-  String get supplementEditorButtonPickFromExisting => '從已有補劑複製';
+  String get supplementEditorButtonPickFromExisting => '與已有補劑共享庫存';
 
   @override
-  String get supplementEditorTemplatePickerTitle => '選擇已有補劑';
+  String supplementEditorSharedStockHint(Object profileName) {
+    return '將與「$profileName」的該補劑共享同一份庫存（消耗會合併計算）。';
+  }
+
+  @override
+  String get supplementEditorTemplatePickerTitle => '選擇要共享庫存的補劑';
 
   @override
   String get supplementEditorTemplatePickerSearchHint => '搜尋補劑名稱/規格';

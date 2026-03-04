@@ -2,11 +2,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/profile.dart';
 import '../models/supplement.dart';
+import '../models/supplement_stock.dart';
 
 class SupplementsStore {
   static const _legacySupplementsKey = 'supplements_v1';
   static const _profilesKey = 'profiles_v1';
   static const _activeProfileKey = 'active_profile_v1';
+  static const _stocksKey = 'stocks_v1';
   static const _backupFormat = 'supplement_tracker_backup';
   static const _backupVersion = 1;
 
@@ -86,9 +88,27 @@ class SupplementsStore {
     await prefs.setString(_supplementsKeyForProfile(profileId), Supplement.encodeList(supplements));
   }
 
+  Future<List<SupplementStock>> loadStocks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_stocksKey);
+    if (raw == null || raw.trim().isEmpty) return const [];
+
+    try {
+      return SupplementStock.decodeList(raw);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<void> saveStocks(List<SupplementStock> stocks) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_stocksKey, SupplementStock.encodeList(stocks));
+  }
+
   Future<Map<String, Object?>> exportBackup() async {
     final profiles = await loadProfiles();
     final activeProfileId = await loadActiveProfileId();
+    final stocks = await loadStocks();
 
     final supplementsByProfile = <String, Object?>{};
     for (final profile in profiles) {
@@ -102,6 +122,7 @@ class SupplementsStore {
       'exportedAt': DateTime.now().toUtc().toIso8601String(),
       'profiles': profiles.map((p) => p.toJson()).toList(),
       'activeProfileId': activeProfileId,
+      'stocks': stocks.map((s) => s.toJson()).toList(),
       'supplementsByProfile': supplementsByProfile,
     };
   }
@@ -130,6 +151,14 @@ class SupplementsStore {
     final supplementsByProfile = backup['supplementsByProfile'];
     final supplementsMap = supplementsByProfile is Map ? supplementsByProfile.cast<String, Object?>() : const <String, Object?>{};
 
+    final rawStocks = backup['stocks'];
+    final stocks = rawStocks is List
+        ? rawStocks
+            .cast<Map<String, dynamic>>()
+            .map((m) => SupplementStock.fromJson(m.cast<String, Object?>()))
+            .toList()
+        : const <SupplementStock>[];
+
     var activeProfileId = backup['activeProfileId'] as String?;
     if (activeProfileId == null || !profiles.any((p) => p.id == activeProfileId)) {
       activeProfileId = profiles.first.id;
@@ -140,6 +169,7 @@ class SupplementsStore {
       if (key == _legacySupplementsKey ||
           key == _profilesKey ||
           key == _activeProfileKey ||
+          key == _stocksKey ||
           key.startsWith('supplements_v1_profile_')) {
         await prefs.remove(key);
       }
@@ -147,6 +177,7 @@ class SupplementsStore {
 
     await saveProfiles(profiles);
     await saveActiveProfileId(activeProfileId);
+    await saveStocks(stocks);
 
     for (final profile in profiles) {
       final raw = supplementsMap[profile.id];

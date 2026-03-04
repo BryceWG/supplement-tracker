@@ -4,16 +4,22 @@ import '../l10n/l10n.dart';
 import '../models/supplement.dart';
 
 class ReminderList extends StatelessWidget {
-  const ReminderList({super.key, required this.supplements});
+  const ReminderList({
+    super.key,
+    required this.supplements,
+    this.remainingDaysOf,
+  });
 
   final List<Supplement> supplements;
+  final int Function(Supplement supplement)? remainingDaysOf;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final reminders = <_Reminder>[];
+    final getDays = remainingDaysOf ?? (Supplement s) => s.remainingDays;
     for (final s in supplements) {
-      final days = s.remainingDays;
+      final days = getDays(s);
       if (days <= 14) {
         reminders.add(
           _Reminder(

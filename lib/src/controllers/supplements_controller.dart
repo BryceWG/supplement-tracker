@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 
 import '../models/profile.dart';
 import '../models/supplement.dart';
+import '../models/supplement_stock.dart';
+import '../models/supplement_template_ref.dart';
 import '../services/supplements_store.dart';
 
 class SupplementsController extends ChangeNotifier {
@@ -20,10 +22,51 @@ class SupplementsController extends ChangeNotifier {
   List<Supplement> _supplements = const [];
   List<Profile> _profiles = const [];
   String? _activeProfileId;
+  List<SupplementStock> _stocks = const [];
+  Map<String, SharedStockStats> _sharedStockStats = const {};
 
   bool get initialized => _initialized;
   List<Supplement> get supplements => List.unmodifiable(_supplements);
   List<Profile> get profiles => List.unmodifiable(_profiles);
+  List<SupplementStock> get stocks => List.unmodifiable(_stocks);
+
+  SharedStockStats? sharedStatsForStockId(String stockId) => _sharedStockStats[stockId];
+  SupplementStock? stockById(String stockId) {
+    for (final s in _stocks) {
+      if (s.id == stockId) return s;
+    }
+    return null;
+  }
+
+  int remainingDaysForSupplement(Supplement s) {
+    final stockId = s.stockId;
+    if (stockId == null) return s.remainingDays;
+    return _sharedStockStats[stockId]?.remainingDays ?? s.remainingDays;
+  }
+
+  int remainingQuantityForSupplement(Supplement s) {
+    final stockId = s.stockId;
+    if (stockId == null) return s.estimatedRemainingQuantity;
+    return _sharedStockStats[stockId]?.remainingQuantity ?? s.estimatedRemainingQuantity;
+  }
+
+  int totalQuantityForSupplement(Supplement s) {
+    final stockId = s.stockId;
+    if (stockId == null) return s.totalQuantityAt(DateTime.now());
+    return _sharedStockStats[stockId]?.totalQuantity ?? s.totalQuantityAt(DateTime.now());
+  }
+
+  double remainingPercentForSupplement(Supplement s) {
+    final stockId = s.stockId;
+    if (stockId == null) return s.remainingPercent;
+    return _sharedStockStats[stockId]?.remainingPercent ?? s.remainingPercent;
+  }
+
+  double dailyCostForSupplement(Supplement s) {
+    final stockId = s.stockId;
+    if (stockId == null) return s.dailyCost;
+    return _sharedStockStats[stockId]?.dailyCost ?? s.dailyCost;
+  }
 
   Profile get activeProfile {
     final id = _activeProfileId;
@@ -55,8 +98,46 @@ class SupplementsController extends ChangeNotifier {
       profileId: _activeProfileId!,
       seedSampleIfEmpty: seedSampleIfEmpty,
     );
+    _stocks = await _store.loadStocks();
+    await _recomputeSharedStockStats(notify: false);
     _initialized = true;
     notifyListeners();
+  }
+
+  Future<void> _recomputeSharedStockStats({required bool notify}) async {
+    if (_stocks.isEmpty || _profiles.isEmpty) {
+      _sharedStockStats = const {};
+      if (notify) notifyListeners();
+      return;
+    }
+
+    final activeId = _activeProfileId ?? activeProfile.id;
+    final all = <Supplement>[];
+    for (final p in _profiles) {
+      if (p.id == activeId) {
+        all.addAll(_supplements);
+      } else {
+        all.addAll(await _store.loadSupplements(profileId: p.id));
+      }
+    }
+
+    final byStockId = <String, List<Supplement>>{};
+    for (final s in all) {
+      final stockId = s.stockId;
+      if (stockId == null) continue;
+      (byStockId[stockId] ??= []).add(s);
+    }
+
+    final today = DateTime.now();
+    final map = <String, SharedStockStats>{};
+    for (final stock in _stocks) {
+      final usages = byStockId[stock.id];
+      if (usages == null || usages.isEmpty) continue;
+      map[stock.id] = SharedStockStats.compute(stock: stock, usages: usages, today: today);
+    }
+
+    _sharedStockStats = map;
+    if (notify) notifyListeners();
   }
 
   Future<void> init() async {
@@ -74,6 +155,8 @@ class SupplementsController extends ChangeNotifier {
     _activeProfileId = profileId;
     await _store.saveActiveProfileId(profileId);
     _supplements = await _store.loadSupplements(profileId: profileId);
+    _stocks = await _store.loadStocks();
+    await _recomputeSharedStockStats(notify: false);
     notifyListeners();
   }
 
@@ -120,6 +203,8 @@ class SupplementsController extends ChangeNotifier {
       _supplements = await _store.loadSupplements(profileId: next);
     }
 
+    _stocks = await _store.loadStocks();
+    await _recomputeSharedStockStats(notify: false);
     notifyListeners();
   }
 
@@ -133,12 +218,16 @@ class SupplementsController extends ChangeNotifier {
       _supplements = [..._supplements, supplement];
     }
     await _store.saveSupplements(profileId: activeProfile.id, supplements: _supplements);
+    _stocks = await _store.loadStocks();
+    await _recomputeSharedStockStats(notify: false);
     notifyListeners();
   }
 
   Future<void> removeById(String id) async {
     _supplements = _supplements.where((s) => s.id != id).toList();
     await _store.saveSupplements(profileId: activeProfile.id, supplements: _supplements);
+    _stocks = await _store.loadStocks();
+    await _recomputeSharedStockStats(notify: false);
     notifyListeners();
   }
 
@@ -170,21 +259,43 @@ class SupplementsController extends ChangeNotifier {
       for (final item in _supplements) if (item.id == supplementId) updated else item,
     ];
     await _store.saveSupplements(profileId: activeProfile.id, supplements: _supplements);
+    await _recomputeSharedStockStats(notify: false);
     notifyListeners();
     return updated;
   }
 
-  Future<Supplement?> replenishQuantity(String supplementId, {required int addQuantity}) async {
+  Future<Supplement?> replenishQuantity(
+    String supplementId, {
+    required int addQuantity,
+    DateTime? today,
+  }) async {
     if (addQuantity <= 0) return null;
 
     final index = _supplements.indexWhere((s) => s.id == supplementId);
     if (index < 0) return null;
 
     final s = _supplements[index];
-    final updated = s.copyWith(
-      totalQuantity: s.totalQuantity + addQuantity,
-      remainingQuantity: s.remainingQuantity + addQuantity,
-    );
+    final now = today ?? DateTime.now();
+    final ymd = Supplement.formatYmd(Supplement.startOfDay(now));
+    final stockId = s.stockId;
+    if (stockId != null) {
+      final stocks = await _store.loadStocks();
+      final stockIndex = stocks.indexWhere((st) => st.id == stockId);
+      if (stockIndex < 0) return null;
+
+      final stock = stocks[stockIndex];
+      final updatedStock = stock.copyWith(
+        stockChanges: [...stock.stockChanges, StockChange(effectiveDate: ymd, quantityDelta: addQuantity)],
+      );
+      final nextStocks = [...stocks]..[stockIndex] = updatedStock;
+      await _store.saveStocks(nextStocks);
+      _stocks = nextStocks;
+      await _recomputeSharedStockStats(notify: false);
+      notifyListeners();
+      return s;
+    }
+
+    final updated = s.copyWith(stockChanges: [...s.stockChanges, StockChange(effectiveDate: ymd, quantityDelta: addQuantity)]);
 
     await upsert(updated);
     return updated;
@@ -207,7 +318,7 @@ class SupplementsController extends ChangeNotifier {
 
   int get shortestRemainingDays {
     if (_supplements.isEmpty) return 0;
-    return _supplements.map((s) => s.remainingDays).reduce((a, b) => a < b ? a : b);
+    return _supplements.map(remainingDaysForSupplement).reduce((a, b) => a < b ? a : b);
   }
 
   Future<String> exportBackupJson() async {
@@ -233,18 +344,115 @@ class SupplementsController extends ChangeNotifier {
     await reload(seedSampleIfEmpty: false);
   }
 
-  Future<List<Supplement>> loadAllSupplementsAcrossProfiles() async {
+  Future<List<SupplementTemplateRef>> loadAllSupplementsAcrossProfiles() async {
     if (!_initialized) return const [];
 
     final activeId = _activeProfileId ?? activeProfile.id;
-    final all = <Supplement>[];
+    final all = <SupplementTemplateRef>[];
     for (final p in _profiles) {
+      final profileName = p.name;
       if (p.id == activeId) {
-        all.addAll(_supplements);
+        all.addAll(_supplements.map((s) => SupplementTemplateRef(profileId: p.id, profileName: profileName, supplement: s)));
       } else {
-        all.addAll(await _store.loadSupplements(profileId: p.id));
+        final list = await _store.loadSupplements(profileId: p.id);
+        all.addAll(list.map((s) => SupplementTemplateRef(profileId: p.id, profileName: profileName, supplement: s)));
       }
     }
     return all;
+  }
+
+  Future<void> addSharedUsageFromTemplate({
+    required SupplementTemplateRef source,
+    required Supplement targetDraft,
+  }) async {
+    final stockId = await _ensureSharedStockFor(sourceProfileId: source.profileId, sourceSupplementId: source.supplement.id);
+    final stock = _stocks.firstWhere((s) => s.id == stockId);
+
+    final existingIndex = _supplements.indexWhere((s) => s.stockId == stockId);
+    final usage = targetDraft.copyWith(
+      name: stock.name,
+      specification: stock.specification,
+      dosageUnit: stock.dosageUnit,
+      price: stock.price,
+      purchaseDate: stock.purchaseDate,
+      purchaseUrl: stock.purchaseUrl,
+      category: stock.category,
+      colorHex: stock.colorHex,
+      stockId: stockId,
+      stockChanges: const <StockChange>[],
+      totalQuantity: stock.totalQuantity,
+    );
+
+    if (existingIndex >= 0) {
+      final existing = _supplements[existingIndex];
+      final updated = usage.copyWith(id: existing.id);
+      await upsert(updated);
+      return;
+    }
+
+    await upsert(usage);
+  }
+
+  Future<String> _ensureSharedStockFor({
+    required String sourceProfileId,
+    required String sourceSupplementId,
+  }) async {
+    final stocks = await _store.loadStocks();
+
+    List<Supplement> sourceList;
+    final activeId = _activeProfileId ?? activeProfile.id;
+    if (sourceProfileId == activeId) {
+      sourceList = [..._supplements];
+    } else {
+      sourceList = await _store.loadSupplements(profileId: sourceProfileId);
+    }
+
+    final index = sourceList.indexWhere((s) => s.id == sourceSupplementId);
+    if (index < 0) {
+      throw StateError('Source supplement not found');
+    }
+
+    final source = sourceList[index];
+    final existingStockId = source.stockId;
+    if (existingStockId != null && stocks.any((s) => s.id == existingStockId)) {
+      _stocks = stocks;
+      return existingStockId;
+    }
+
+    final newStockId = 'stock_${DateTime.now().microsecondsSinceEpoch}';
+    final stock = SupplementStock(
+      id: newStockId,
+      name: source.name,
+      specification: source.specification,
+      dosageUnit: source.dosageUnit,
+      price: source.price,
+      purchaseDate: source.purchaseDate,
+      purchaseUrl: source.purchaseUrl,
+      totalQuantity: source.totalQuantity,
+      category: source.category,
+      colorHex: source.colorHex,
+      stockChanges: source.stockChanges,
+    );
+
+    final nextStocks = [...stocks, stock];
+    await _store.saveStocks(nextStocks);
+
+    final updatedSource = source.copyWith(
+      stockId: newStockId,
+      stockChanges: const <StockChange>[],
+    );
+    sourceList = [
+      for (final s in sourceList) if (s.id == sourceSupplementId) updatedSource else s,
+    ];
+    await _store.saveSupplements(profileId: sourceProfileId, supplements: sourceList);
+
+    if (sourceProfileId == activeId) {
+      _supplements = sourceList;
+    }
+
+    _stocks = nextStocks;
+    await _recomputeSharedStockStats(notify: false);
+    notifyListeners();
+    return newStockId;
   }
 }

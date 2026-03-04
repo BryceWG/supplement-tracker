@@ -134,8 +134,9 @@
   "supplementEditorFieldCategoryLabel": "分類",
   "supplementEditorFieldPurchaseUrlLabel": "購買連結（可選）",
   "supplementEditorFieldPurchaseUrlHint": "https://...",
-  "supplementEditorButtonPickFromExisting": "從已有補劑複製",
-  "supplementEditorTemplatePickerTitle": "選擇已有補劑",
+  "supplementEditorButtonPickFromExisting": "與已有補劑共享庫存",
+  "supplementEditorSharedStockHint": "將與「{profileName}」的該補劑共享同一份庫存（消耗會合併計算）。",
+  "supplementEditorTemplatePickerTitle": "選擇要共享庫存的補劑",
   "supplementEditorTemplatePickerSearchHint": "搜尋補劑名稱/規格",
   "supplementEditorTemplatePickerEmpty": "沒有找到符合的補劑"
 }

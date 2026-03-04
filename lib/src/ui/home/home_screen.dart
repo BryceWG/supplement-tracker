@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../controllers/supplements_controller.dart';
 import '../../l10n/l10n.dart';
 import '../../models/supplement.dart';
+import '../../models/supplement_template_ref.dart';
 import '../../theme/app_theme.dart';
 import '../../util/format.dart';
 import '../../widgets/charts/category_pie_chart.dart';
@@ -30,9 +31,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   Future<void> _openEditor({Supplement? supplement}) async {
     final templates =
-        supplement == null ? await widget.controller.loadAllSupplementsAcrossProfiles() : const <Supplement>[];
+        supplement == null ? await widget.controller.loadAllSupplementsAcrossProfiles() : const <SupplementTemplateRef>[];
     if (!mounted) return;
-    final result = await showGeneralDialog<Supplement>(
+    final result = await showGeneralDialog<SupplementEditorResult>(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'close',
@@ -53,8 +54,10 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
 
-    if (result != null) {
-      await widget.controller.upsert(result);
+    if (result is SupplementEditorUpsertResult) {
+      await widget.controller.upsert(result.supplement);
+    } else if (result is SupplementEditorShareStockResult) {
+      await widget.controller.addSharedUsageFromTemplate(source: result.source, targetDraft: result.targetDraft);
     }
   }
 
@@ -176,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         final supplements = controller.supplements;
-        final hasLowStockReminders = supplements.any((s) => s.remainingDays <= 14);
+        final hasLowStockReminders = supplements.any((s) => controller.remainingDaysForSupplement(s) <= 14);
 
         return Scaffold(
           appBar: _TopNavBar(controller: controller),
@@ -206,7 +209,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         const SizedBox(height: 8),
                         if (hasLowStockReminders) ...[
-                          ReminderList(supplements: supplements),
+                          ReminderList(
+                            supplements: supplements,
+                            remainingDaysOf: controller.remainingDaysForSupplement,
+                          ),
                           const SizedBox(height: 18),
                         ],
                         _StatsGrid(
@@ -230,6 +236,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                     onReplenish: () => _replenish(s),
                                     onPostponeOneDay: () => _postponeOneDay(s),
                                     onDelete: () => _confirmDelete(s),
+                                    remainingDays: controller.remainingDaysForSupplement(s),
+                                    remainingPercent: controller.remainingPercentForSupplement(s),
+                                    remainingQuantity: controller.remainingQuantityForSupplement(s),
+                                    totalQuantity: controller.totalQuantityForSupplement(s),
                                   ),
                                   const SizedBox(height: 12),
                                 ],

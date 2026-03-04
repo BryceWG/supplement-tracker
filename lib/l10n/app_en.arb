@@ -264,8 +264,14 @@
   "supplementEditorFieldCategoryLabel": "Category",
   "supplementEditorFieldPurchaseUrlLabel": "Purchase link (optional)",
   "supplementEditorFieldPurchaseUrlHint": "https://...",
-  "supplementEditorButtonPickFromExisting": "Pick from existing",
-  "supplementEditorTemplatePickerTitle": "Choose an existing supplement",
+  "supplementEditorButtonPickFromExisting": "Share existing stock",
+  "supplementEditorSharedStockHint": "You will share the same stock as {profileName} (consumption is combined).",
+  "@supplementEditorSharedStockHint": {
+    "placeholders": {
+      "profileName": {}
+    }
+  },
+  "supplementEditorTemplatePickerTitle": "Choose a supplement to share stock",
   "supplementEditorTemplatePickerSearchHint": "Search by name or specification",
   "supplementEditorTemplatePickerEmpty": "No matching supplements"
 }

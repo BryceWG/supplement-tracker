@@ -4,8 +4,29 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/l10n.dart';
 import '../../models/supplement.dart';
+import '../../models/supplement_template_ref.dart';
 import '../../theme/app_theme.dart';
 import '../../util/colors.dart';
+
+sealed class SupplementEditorResult {
+  const SupplementEditorResult();
+}
+
+class SupplementEditorUpsertResult extends SupplementEditorResult {
+  const SupplementEditorUpsertResult(this.supplement);
+
+  final Supplement supplement;
+}
+
+class SupplementEditorShareStockResult extends SupplementEditorResult {
+  const SupplementEditorShareStockResult({
+    required this.source,
+    required this.targetDraft,
+  });
+
+  final SupplementTemplateRef source;
+  final Supplement targetDraft;
+}
 
 class SupplementEditorDialog extends StatefulWidget {
   const SupplementEditorDialog({
@@ -15,7 +36,7 @@ class SupplementEditorDialog extends StatefulWidget {
   });
 
   final Supplement? supplement;
-  final List<Supplement> templates;
+  final List<SupplementTemplateRef> templates;
 
   @override
   State<SupplementEditorDialog> createState() => _SupplementEditorDialogState();
@@ -35,7 +56,9 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
   String _category = '维生素';
   late String _startUseDateYmd;
   late List<String> _skippedDates;
-  late final List<Supplement> _templateOptions;
+  late final List<SupplementTemplateRef> _templateOptions;
+  SupplementTemplateRef? _shareSource;
+  bool _shareStock = false;
 
   @override
   void initState() {
@@ -45,7 +68,8 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
     _spec = TextEditingController(text: s?.specification ?? '');
     _dailyDosage = TextEditingController(text: (s?.dailyDosage ?? 1).toString());
     _price = TextEditingController(text: (s?.price ?? '').toString());
-    _totalQty = TextEditingController(text: (s?.totalQuantity ?? '').toString());
+    final initialTotalQty = s == null ? '' : s.totalQuantityAt(DateTime.now()).toString();
+    _totalQty = TextEditingController(text: s == null ? '' : initialTotalQty);
     _purchaseUrl = TextEditingController(text: s?.purchaseUrl ?? '');
 
     _dosageUnit = s?.dosageUnit ?? '粒';
@@ -53,30 +77,9 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
     _startUseDateYmd = s?.startUseDate ?? s?.purchaseDate ?? _todayYmd();
     _skippedDates = [...(s?.skippedDates ?? const [])];
 
-    _templateOptions = _buildTemplateOptions(widget.templates);
-  }
-
-  List<Supplement> _buildTemplateOptions(List<Supplement> raw) {
-    if (raw.isEmpty) return const [];
-
-    final seen = <String>{};
-    final list = <Supplement>[];
-    for (final s in raw) {
-      final key = [
-        s.name,
-        s.specification,
-        s.dailyDosage.toString(),
-        s.dosageUnit,
-        s.price.toString(),
-        s.totalQuantity.toString(),
-        s.category,
-        s.purchaseUrl ?? '',
-      ].join('|');
-      if (seen.add(key)) list.add(s);
-    }
-
-    list.sort((a, b) => a.name.compareTo(b.name));
-    return list;
+    _templateOptions = widget.templates.toList()
+      ..sort((a, b) => a.supplement.name.compareTo(b.supplement.name));
+    _shareStock = s?.stockId != null;
   }
 
   @override
@@ -151,6 +154,21 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
       list.sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate));
       dosageChanges = list;
     }
+
+    List<StockChange> stockChanges = existing?.stockChanges ?? const <StockChange>[];
+    int baseTotalQuantity = totalQty;
+    if (existing != null && existing.stockId == null) {
+      baseTotalQuantity = existing.totalQuantity;
+      final currentTotal = existing.totalQuantityAt(DateTime.now());
+      final delta = totalQty - currentTotal;
+      if (delta != 0) {
+        final list = [...existing.stockChanges];
+        list.removeWhere((c) => c.effectiveDate == todayYmd);
+        list.add(StockChange(effectiveDate: todayYmd, quantityDelta: delta));
+        list.sort((a, b) => a.effectiveDate.compareTo(b.effectiveDate));
+        stockChanges = list;
+      }
+    }
     final result = Supplement(
       id: id,
       name: _name.text.trim(),
@@ -161,23 +179,30 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
       purchaseDate: purchaseDate,
       startUseDate: _startUseDateYmd,
       purchaseUrl: purchaseUrl.isEmpty ? null : purchaseUrl,
-      totalQuantity: totalQty,
+      stockId: existing?.stockId,
+      totalQuantity: baseTotalQuantity,
       remainingQuantity: existing == null ? totalQty : min(existing.remainingQuantity, totalQty),
       category: _category,
       colorHex: colorHex,
       skippedDates: _skippedDates,
       dosageChanges: dosageChanges,
+      stockChanges: stockChanges,
     );
 
-    Navigator.of(context).pop(result);
+    final shareSource = _shareSource;
+    if (existing == null && _shareStock && shareSource != null) {
+      Navigator.of(context).pop(SupplementEditorShareStockResult(source: shareSource, targetDraft: result));
+      return;
+    }
+
+    Navigator.of(context).pop(SupplementEditorUpsertResult(result));
   }
 
-  void _applyTemplate(Supplement template) {
+  void _applyShareSource(Supplement template) {
     _name.text = template.name;
     _spec.text = template.specification;
-    _dailyDosage.text = template.dailyDosage.toString();
     _price.text = template.price.toString();
-    _totalQty.text = template.totalQuantity.toString();
+    _totalQty.text = template.totalQuantityAt(DateTime.now()).toString();
     _purchaseUrl.text = template.purchaseUrl ?? '';
 
     setState(() {
@@ -185,14 +210,15 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
       _category = template.category;
       _startUseDateYmd = _todayYmd();
       _skippedDates = const [];
+      _shareStock = true;
     });
   }
 
-  Future<void> _pickTemplate() async {
+  Future<void> _pickShareSource() async {
     if (_templateOptions.isEmpty) return;
 
     final l10n = context.l10n;
-    final selected = await showModalBottomSheet<Supplement>(
+    final selected = await showModalBottomSheet<SupplementTemplateRef>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
@@ -206,8 +232,11 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
 
             final filtered = trimmed.isEmpty
                 ? _templateOptions
-                : _templateOptions.where((s) {
-                    return s.name.toLowerCase().contains(lower) || s.specification.toLowerCase().contains(lower);
+                : _templateOptions.where((ref) {
+                    final s = ref.supplement;
+                    return s.name.toLowerCase().contains(lower) ||
+                        s.specification.toLowerCase().contains(lower) ||
+                        ref.profileName.toLowerCase().contains(lower);
                   }).toList();
 
             return SafeArea(
@@ -244,16 +273,18 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                               itemCount: filtered.length,
                               separatorBuilder: (_, __) => const SizedBox(height: 8),
                               itemBuilder: (context, index) {
-                                final s = filtered[index];
+                                final ref = filtered[index];
+                                final s = ref.supplement;
                                 final unit = dosageUnitLabel(context, s.dosageUnit, count: s.dailyDosage);
-                                final subtitle = '${s.specification} · ${s.dailyDosage}$unit · ${categoryLabel(context, s.category)}';
+                                final subtitle =
+                                    '${ref.profileName} · ${s.specification} · ${s.dailyDosage}$unit · ${categoryLabel(context, s.category)}';
 
                                 return Material(
                                   color: const Color(0xFFF5F5F5),
                                   borderRadius: BorderRadius.circular(12),
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(12),
-                                    onTap: () => Navigator.of(context).pop(s),
+                                    onTap: () => Navigator.of(context).pop(ref),
                                     child: Padding(
                                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                       child: Column(
@@ -286,14 +317,17 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
     );
 
     if (selected == null) return;
-    _applyTemplate(selected);
+    setState(() => _shareSource = selected);
+    _applyShareSource(selected.supplement);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final isEditing = widget.supplement != null;
+    final isSharedUsage = widget.supplement?.stockId != null;
     final isNarrow = MediaQuery.sizeOf(context).width < 600;
+    final lockStockFields = isSharedUsage || (!isEditing && _shareStock && _shareSource != null);
 
     return SafeArea(
       child: Align(
@@ -331,15 +365,31 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                           Align(
                             alignment: Alignment.centerLeft,
                             child: OutlinedButton.icon(
-                              onPressed: _pickTemplate,
+                              onPressed: _pickShareSource,
                               icon: const Icon(Icons.history, size: 18),
                               label: Text(l10n.supplementEditorButtonPickFromExisting),
                             ),
                           ),
                           const SizedBox(height: 12),
                         ],
+                        if (!isEditing && _shareSource != null) ...[
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F5F5),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              l10n.supplementEditorSharedStockHint(_shareSource!.profileName),
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF5A5A5A)),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         TextFormField(
                           controller: _name,
+                          enabled: !lockStockFields,
                           decoration: InputDecoration(
                             labelText: l10n.supplementEditorFieldNameLabel,
                             hintText: l10n.supplementEditorFieldNameHint,
@@ -350,6 +400,7 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _spec,
+                          enabled: !lockStockFields,
                           decoration: InputDecoration(
                             labelText: l10n.supplementEditorFieldSpecLabel,
                             hintText: l10n.supplementEditorFieldSpecHint,
@@ -377,6 +428,7 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                             Expanded(
                               child: DropdownButtonFormField<String>(
                                 initialValue: _dosageUnit,
+                                onChanged: lockStockFields ? null : (v) => setState(() => _dosageUnit = v ?? '粒'),
                                 decoration: InputDecoration(labelText: l10n.supplementEditorFieldUnitLabel),
                                 items: [
                                   DropdownMenuItem(value: '粒', child: Text(dosageUnitLabel(context, '粒', count: 1))),
@@ -384,7 +436,6 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                                   DropdownMenuItem(value: '滴', child: Text(dosageUnitLabel(context, '滴', count: 1))),
                                   DropdownMenuItem(value: '勺', child: Text(dosageUnitLabel(context, '勺', count: 1))),
                                 ],
-                                onChanged: (v) => setState(() => _dosageUnit = v ?? '粒'),
                               ),
                             ),
                           ],
@@ -395,6 +446,7 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                             Expanded(
                               child: TextFormField(
                                 controller: _price,
+                                enabled: !lockStockFields,
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                 decoration: InputDecoration(
                                   labelText: l10n.supplementEditorFieldPriceLabel,
@@ -412,6 +464,7 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                             Expanded(
                               child: TextFormField(
                                 controller: _totalQty,
+                                enabled: !lockStockFields,
                                 keyboardType: TextInputType.number,
                                 decoration: InputDecoration(
                                   labelText: l10n.supplementEditorFieldTotalQtyLabel,
@@ -466,6 +519,7 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
                           initialValue: _category,
+                          onChanged: lockStockFields ? null : (v) => setState(() => _category = v ?? '维生素'),
                           decoration: InputDecoration(labelText: l10n.supplementEditorFieldCategoryLabel),
                           items: [
                             DropdownMenuItem(value: '维生素', child: Text(categoryLabel(context, '维生素'))),
@@ -474,11 +528,11 @@ class _SupplementEditorDialogState extends State<SupplementEditorDialog> {
                             DropdownMenuItem(value: '益生菌', child: Text(categoryLabel(context, '益生菌'))),
                             DropdownMenuItem(value: '其他', child: Text(categoryLabel(context, '其他'))),
                           ],
-                          onChanged: (v) => setState(() => _category = v ?? '维生素'),
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _purchaseUrl,
+                          enabled: !lockStockFields,
                           decoration: InputDecoration(
                             labelText: l10n.supplementEditorFieldPurchaseUrlLabel,
                             hintText: l10n.supplementEditorFieldPurchaseUrlHint,

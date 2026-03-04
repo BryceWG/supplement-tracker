@@ -175,6 +175,7 @@ class _SupplementListExportScreenState extends State<SupplementListExportScreen>
                     key: _boundaryKey,
                     child: _ExportSurface(
                       child: _ExportSheet(
+                        controller: controller,
                         profileName: controller.activeProfile.name,
                         exportedAt: DateTime.now(),
                         dailyCostTotal: controller.dailyCostTotal,
@@ -195,6 +196,7 @@ class _SupplementListExportScreenState extends State<SupplementListExportScreen>
 
 class _ExportSheet extends StatelessWidget {
   const _ExportSheet({
+    required this.controller,
     required this.profileName,
     required this.exportedAt,
     required this.dailyCostTotal,
@@ -202,6 +204,7 @@ class _ExportSheet extends StatelessWidget {
     required this.supplements,
   });
 
+  final SupplementsController controller;
   final String profileName;
   final DateTime exportedAt;
   final double dailyCostTotal;
@@ -211,6 +214,7 @@ class _ExportSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _ExportListSheet(
+      controller: controller,
       profileName: profileName,
       exportedAt: exportedAt,
       dailyCostTotal: dailyCostTotal,
@@ -222,6 +226,7 @@ class _ExportSheet extends StatelessWidget {
 
 class _ExportListSheet extends StatelessWidget {
   const _ExportListSheet({
+    required this.controller,
     required this.profileName,
     required this.exportedAt,
     required this.dailyCostTotal,
@@ -229,6 +234,7 @@ class _ExportListSheet extends StatelessWidget {
     required this.supplements,
   });
 
+  final SupplementsController controller;
   final String profileName;
   final DateTime exportedAt;
   final double dailyCostTotal;
@@ -293,7 +299,14 @@ class _ExportListSheet extends StatelessWidget {
           Container(height: 1, color: Colors.black.withValues(alpha: 0.06)),
           const SizedBox(height: 12),
           for (var i = 0; i < supplements.length; i++) ...[
-            _SupplementRow(index: i + 1, supplement: supplements[i]),
+            _SupplementRow(
+              index: i + 1,
+              supplement: supplements[i],
+              remainingDays: controller.remainingDaysForSupplement(supplements[i]),
+              remainingQuantity: controller.remainingQuantityForSupplement(supplements[i]),
+              totalQuantity: controller.totalQuantityForSupplement(supplements[i]),
+              remainingPercent: controller.remainingPercentForSupplement(supplements[i]),
+            ),
             const SizedBox(height: 10),
           ],
           const SizedBox(height: 4),
@@ -431,11 +444,22 @@ class _InfoChip extends StatelessWidget {
 }
 
 class _SupplementRow extends StatelessWidget {
-  const _SupplementRow({required this.index, required this.supplement});
+  const _SupplementRow({
+    required this.index,
+    required this.supplement,
+    required this.remainingDays,
+    required this.remainingQuantity,
+    required this.totalQuantity,
+    required this.remainingPercent,
+  });
 
   final int index;
 
   final Supplement supplement;
+  final int remainingDays;
+  final int remainingQuantity;
+  final int totalQuantity;
+  final double remainingPercent;
 
   Color _progressColor(int remainingDays) {
     if (remainingDays <= 14) return const Color(0xFFEF4444);
@@ -447,9 +471,9 @@ class _SupplementRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final stripColor = CategoryColors.fromHex(supplement.colorHex);
-    final remainingDays = supplement.remainingDays;
-    final estimatedRemainingQty = supplement.estimatedRemainingQuantity;
-    final progress = supplement.remainingPercent.clamp(0.0, 1.0);
+    final estimatedRemainingQty = remainingQuantity;
+    final totalQtyToday = totalQuantity;
+    final progress = remainingPercent.clamp(0.0, 1.0);
     final progressColor = _progressColor(remainingDays);
 
     final unit = dosageUnitLabel(context, supplement.dosageUnit, count: supplement.dailyDosage);
@@ -521,7 +545,7 @@ class _SupplementRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      l10n.exportListItemMeta(startDate, estimatedRemainingQty, supplement.totalQuantity),
+                      l10n.exportListItemMeta(startDate, estimatedRemainingQty, totalQtyToday),
                       style: const TextStyle(fontSize: 12, color: Color(0xFF8A8A8A)),
                     ),
                   ],
